@@ -345,8 +345,11 @@
     }, ms);
   }
   map.on('moveend', spin);
-  ['mousedown','touchstart','wheel','dragstart','pitchstart'].forEach(ev =>
-    map.on(ev, e => { if (e.originalEvent) { map.stop(); pauseSpin(); } }));
+  // Toute interaction de l'utilisateur met la rotation en pause.
+  // (Surtout ne pas appeler map.stop() ici : ça annule le geste en cours,
+  // ce qui rendait le pincement et la molette saccadés.)
+  ['mousedown','touchstart','wheel'].forEach(ev =>
+    map.getCanvasContainer().addEventListener(ev, () => pauseSpin(), { passive: true }));
 
   /* ============ Lecture altitude / échelle / coordonnées ============ */
   const SCALES = [[2.5,'Planète'],[4.5,'Continent'],[6.5,'Pays'],[9,'Région'],[12,'Ville'],[15,'Quartier'],[99,'Rue']];
