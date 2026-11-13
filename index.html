@@ -82,7 +82,7 @@
   #loadBar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 
   /* ---------- Panneau épidémie ---------- */
-  #epi{position:fixed;right:14px;top:calc(140px + var(--safe-t));width:330px;max-height:calc(100vh - 240px);overflow:auto;z-index:6;padding:14px;display:none;scrollbar-width:thin}
+  #epi{position:fixed;right:14px;top:calc(140px + var(--safe-t));width:360px;max-height:calc(100vh - 240px);overflow:auto;z-index:6;padding:14px;display:none;scrollbar-width:thin}
   #epi.open{display:block}
   .epiHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .epiHead b{font-family:"Barlow Condensed";font-weight:600;font-size:19px;letter-spacing:.06em;text-transform:uppercase}
@@ -124,6 +124,30 @@
   #toast{position:fixed;left:50%;top:calc(130px + var(--safe-t));transform:translateX(-50%);z-index:9;padding:10px 14px;font-size:13px;opacity:0;transition:.3s;pointer-events:none}
   #toast.show{opacity:1}
   #bEpi.on{color:#ff6b5c;background:rgba(255,80,60,.14)}
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px}
+  .tabs button{border:0;border-radius:8px;padding:8px 4px;background:rgba(255,255,255,.05);color:var(--muted);font:600 12px Inter,sans-serif;cursor:pointer}
+  .tabs button.on{background:rgba(255,80,60,.16);color:#ff8a7c}
+  .inp{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;padding:10px 12px;color:var(--text);font:500 14px Inter,sans-serif;outline:0}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+  .chip2{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);border-radius:999px;padding:5px 10px;font:500 12px Inter,sans-serif;cursor:pointer}
+  .chip2.on{border-color:rgba(255,90,70,.7);color:#ffb0a6;background:rgba(255,70,50,.12)}
+  .tog{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted);margin:6px 0;cursor:pointer}
+  .tog input{accent-color:#ff5a46}
+  .sel{background:rgba(255,70,50,.08);border:1px solid rgba(255,90,70,.3);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;margin:6px 0}
+  .sel b{display:block;font-size:14px;margin-bottom:2px}
+  .sel span{display:block;color:var(--muted)}
+  #pathList{max-height:260px;overflow:auto;scrollbar-width:thin}
+  .modes{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+  i.mode{font-style:normal;font-size:10px;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.07);color:#c9d1d9}
+  .fld{display:grid;gap:4px;font-size:12.5px;margin-top:9px;color:var(--text)}
+  .fld select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--text);font:500 13px Inter,sans-serif}
+  .fld select option{background:#161a20}
+  .grp{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:16px 0 2px;padding-top:10px;border-top:1px solid var(--line)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .row2 .cta{font-size:12.5px;padding:11px 6px}
+  #bFollow.on{background:rgba(255,80,60,.18);color:#ff9d92}
+  #cityLine{font-size:12px;color:var(--muted);margin-top:6px}
+  .zero.dead{background:#333;animation:none}
 
   /* ---------- Attribution ---------- */
   .maplibregl-ctrl-bottom-right{bottom:calc(84px + var(--safe-b))!important}
@@ -162,7 +186,8 @@
     #clockTime{font-size:20px}
     #speeds{margin:0}
     .spd{padding:6px 7px;flex:none;font-size:11px}
-    #epi{left:8px;right:8px;width:auto;top:auto;bottom:calc(8px + var(--safe-b));max-height:56vh;border-radius:16px;background:rgba(14,17,22,.97);padding:12px}
+    #pathList{max-height:180px}
+    #epi{left:8px;right:8px;width:auto;top:auto;bottom:calc(8px + var(--safe-b));max-height:62vh;border-radius:16px;background:rgba(14,17,22,.97);padding:12px}
     .stats{grid-template-columns:1fr 1fr 1fr;gap:5px}
     .st{padding:6px 8px}
     .st b{font-size:18px}
@@ -186,7 +211,7 @@
 <div id="splash"><div><b>VECTEUR</b><span>Chargement de la planète</span><i></i></div></div>
 
 <div id="top">
-  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 3 — L'épidémie</span></div>
+  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 3 — Contagion</span></div>
   <div id="searchWrap">
     <div id="search" class="glass">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -212,18 +237,63 @@
 <div id="epi" class="glass open">
   <div class="epiHead"><b id="epiTitle">Nouvelle épidémie</b><button id="epiClose" aria-label="Fermer">×</button></div>
   <div id="epiSetup">
-    <div class="lbl">Pathogène</div>
-    <div id="pathList"></div>
-    <details>
-      <summary>Réglages avancés (bac à sable)</summary>
-      <label class="sl">Contagiosité R₀ <b id="v-r0"></b><input id="sl-r0" type="range"></label>
-      <label class="sl">Incubation <b id="v-inc"></b><input id="sl-inc" type="range"></label>
-      <label class="sl">Durée de contagion <b id="v-inf"></b><input id="sl-inf" type="range"></label>
-      <label class="sl">Létalité <b id="v-ifr"></b><input id="sl-ifr" type="range"></label>
-    </details>
-    <label class="sl">Personnes inoculées <b id="v-seed"></b><input id="sl-seed" type="range" min="0" max="9" step="1" value="3"></label>
-    <div class="note">Valeurs indicatives tirées de la littérature, sans vaccin, traitement ni mesures sanitaires.</div>
-    <button id="epiGo" class="cta" disabled>Chargement du moteur…</button>
+    <div class="tabs"><button data-tab="1" class="on">1 · Agent</button><button data-tab="2">2 · Patient zéro</button><button data-tab="3">3 · Libérer</button></div>
+    <section id="tab1">
+      <input id="pathSearch" class="inp" placeholder="Rechercher un virus, une bactérie, un gaz…" autocomplete="off">
+      <div id="catChips" class="chips"></div>
+      <label class="tog"><input type="checkbox" id="combine"> Combiner jusqu’à 3 agents (hybride)</label>
+      <div id="pathSel" class="sel"></div>
+      <div class="lbl"><span id="pathCount"></span></div>
+      <div id="pathList"></div>
+      <details>
+        <summary>Réglages avancés (bac à sable)</summary>
+        <label class="sl">Contagiosité R₀ <b id="v-r0"></b><input id="sl-r0" type="range"></label>
+        <label class="sl">Incubation / délai d’action <b id="v-inc"></b><input id="sl-inc" type="range"></label>
+        <label class="sl">Durée de la maladie <b id="v-inf"></b><input id="sl-inf" type="range"></label>
+        <label class="sl">Létalité <b id="v-ifr"></b><input id="sl-ifr" type="range"></label>
+        <label class="sl">Porteurs sans symptômes <b id="v-asymp"></b><input id="sl-asymp" type="range"></label>
+      </details>
+      <div class="note">Valeurs indicatives tirées de la littérature, sans vaccin, traitement ni mesures sanitaires. Agents chimiques et toxines : valeurs de jeu simplifiées.</div>
+      <button class="cta" data-next="2">Suivant : patient zéro →</button>
+    </section>
+    <section id="tab2" hidden>
+      <div id="p0Form">
+        <label class="fld">Profil type<select id="p0Preset"></select></label>
+        <div class="grp">Identité</div>
+        <label class="sl">Âge <b id="v-age"></b><input id="p0Age" type="range" min="1" max="99"></label>
+        <label class="fld">Profession<select id="p0Prof"></select></label>
+        <label class="sl">Foyer <b id="v-foyer"></b><input id="p0Foyer" type="range" min="1" max="10"></label>
+        <div class="grp">Vie sociale et hygiène</div>
+        <label class="sl">Contacts rapprochés <b id="v-contacts"></b><input id="p0Contacts" type="range" min="1" max="100"></label>
+        <label class="sl">Lavage des mains <b id="v-hyg"></b><input id="p0Hyg" type="range" min="0" max="100"></label>
+        <label class="fld">Masque<select id="p0Mask"><option value="0">Jamais</option><option value="1">Toujours dehors</option></select></label>
+        <div class="lbl">Lieux fréquentés</div>
+        <div id="p0Lieux" class="chips"></div>
+        <label class="sl">Partenaires intimes <b id="v-part"></b><input id="p0Part" type="range" min="0" max="10"></label>
+        <label class="fld">Animaux<select id="p0Animaux"><option value="aucun">Aucun</option><option value="compagnie">Animaux de compagnie</option><option value="elevage">Élevage</option><option value="sauvage">Contact avec la faune sauvage</option></select></label>
+        <div class="grp">Déplacements</div>
+        <label class="fld">Transport quotidien<select id="p0Transport"><option value="marche">Marche</option><option value="velo">Vélo</option><option value="voiture">Voiture</option><option value="taxi">Taxi / VTC</option><option value="transports">Transports en commun</option></select></label>
+        <label class="sl">Voyages en avion <b id="v-voy"></b><input id="p0Voy" type="range" min="0" max="10" step="1"></label>
+        <label class="fld">Prochain voyage prévu<select id="p0Dest"></select></label>
+        <label class="sl">Départ <b id="v-day"></b><input id="p0Day" type="range" min="0" max="30"></label>
+        <div class="grp">Face à la maladie</div>
+        <label class="fld">Quand il a des symptômes<select id="p0Iso"><option value="premiers">S’isole dès les premiers signes</option><option value="severe">S’isole seulement si c’est grave</option><option value="jamais">Continue sa vie normalement</option></select></label>
+        <label class="tog"><input type="checkbox" id="p0Cache"> Cache sa maladie à son entourage</label>
+      </div>
+      <div id="dispForm" hidden>
+        <div class="note">Cet agent ne se transmet pas d’une personne à l’autre : il est libéré en un point et touche ceux qui y sont exposés.</div>
+        <label class="fld">Quantité<select id="dQty"><option value="0.5">Faible</option><option value="1" selected>Moyenne</option><option value="2">Massive</option></select></label>
+        <label class="fld">Vent<select id="dWind"><option value="0.5">Calme</option><option value="3" selected>Modéré</option><option value="8">Fort</option></select></label>
+        <label class="fld">Le vent souffle vers<select id="dDir"><option value="">Direction aléatoire</option><option value="90">Le nord</option><option value="0">L’est</option><option value="270">Le sud</option><option value="180">L’ouest</option></select></label>
+      </div>
+      <button class="cta" data-next="3">Suivant →</button>
+    </section>
+    <section id="tab3" hidden>
+      <div id="sumText" class="sel"></div>
+      <label class="sl" id="seedRow">Personnes contaminées au départ <b id="v-seed"></b><input id="sl-seed" type="range" min="0" max="9" step="1" value="0"></label>
+      <div class="note">On descend ensuite dans la rue : chaque habitant de la zone est simulé individuellement, et la contagion se fait personne par personne.</div>
+      <button id="epiGo" class="cta" disabled>Chargement du moteur…</button>
+    </section>
   </div>
   <div id="epiRun" hidden>
     <div id="runPlace"></div>
@@ -238,8 +308,9 @@
       <div class="st"><span><i style="background:#fff"></i>Cas au total</span><b id="stC">0</b></div>
     </div>
     <canvas id="spark"></canvas>
+    <div id="cityLine"></div>
     <div id="lastEvent"></div>
-    <button id="epiNew" class="cta sec">Nouvelle épidémie</button>
+    <div class="row2"><button id="bFollow" class="cta sec">◎ Suivre le patient zéro</button><button id="epiNew" class="cta sec">Nouvelle épidémie</button></div>
   </div>
 </div>
 <div id="place" class="glass"><span id="placeText"></span><button id="placeOk" hidden>☣ Libérer</button><button id="placeCancel">Annuler</button></div>
@@ -281,6 +352,8 @@
   </div>
 </div>
 
+<script src="js/catalogue.js"></script>
+<script src="js/ville-epi.js"></script>
 <script>
 (() => {
   'use strict';
@@ -458,7 +531,11 @@
   function start(){
     if (started) return; started = true;
     try { map.addLayer(nightLayer, 'boundary-state'); } catch (e) { console.warn('nuit', e); }
-    try { map.addLayer(popLayer, 'label-road'); map.addLayer(cityLayer, 'label-road'); map.addLayer(flightLayer); } catch (e) { console.warn('population', e); }
+    try {
+      map.addSource('nuages', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({ id: 'nuages', type: 'fill', source: 'nuages', paint: { 'fill-color': ['get', 'col'], 'fill-opacity': ['get', 'o'] } }, 'label-road');
+      map.addLayer(popLayer, 'label-road'); map.addLayer(cityLayer, 'label-road'); map.addLayer(flightLayer);
+    } catch (e) { console.warn('population', e); }
     loadPopulation().catch(e => { console.warn(e); $('popLine').textContent = 'Population indisponible'; });
     syncTerrain();
     map.once('idle', hideSplash);
@@ -950,7 +1027,7 @@
       if (f.geometry.type !== 'Point') continue;
       const [x, y] = toXY(...f.geometry.coordinates); if (!inside(x, y)) continue;
       const k = Math.round(x / 4) + ',' + Math.round(y / 4); if (bSeen.has('p' + k)) continue; bSeen.add('p' + k);
-      P.push({ x, y, cls: f.properties.class });
+      P.push({ x, y, cls: f.properties.subclass || f.properties.class, cls2: f.properties.class, name: f.properties.name });
     }
     if (!B.length) for (let i = 0; i < M; i += 7) B.push({ x: X[i], y: Y[i], r: 8, floorArea: 200, h: 6 });
     for (const b of B) { b.node = nearest(b.x, b.y); b.carNode = nearest(b.x, b.y, gridCar); }
@@ -977,7 +1054,7 @@
     const homeOf = sampler(B, b => b.h > 28 ? b.floorArea * 0.6 : b.floorArea);        // les tours de bureaux logent moins
     const workOf = sampler(B, b => b.floorArea * (b.h > 18 ? 2.2 : 1) * (b.floorArea > 2500 ? 1.6 : 1));
     // Destinations : bâtiments (index ≥ 0) ou POI (index négatif)
-    const places = B.map(b => ({ x: b.x, y: b.y, r: b.r, node: b.node, carNode: b.carNode })).concat(P.map(p => ({ x: p.x, y: p.y, r: 6, node: p.node, carNode: p.carNode })));
+    const places = B.map(b => ({ x: b.x, y: b.y, r: b.r, node: b.node, carNode: b.carNode, cls: null })).concat(P.map(p => ({ x: p.x, y: p.y, r: 6, node: p.node, carNode: p.carNode, cls: p.cls, cls2: p.cls2, name: p.name })));
     const nearbyPlace = (x, y, maxD) => {
       for (let t = 0; t < 12; t++) { const i = Math.floor(Math.random() * places.length); const p = places[i]; if ((p.x - x) ** 2 + (p.y - y) ** 2 < maxD * maxD) return i; }
       return Math.floor(Math.random() * places.length);
@@ -1018,14 +1095,22 @@
       ag.u[i] = Math.random(); ag.stayHome[i] = Math.random() < 0.6 ? 1 : 0;
       ag.hlng[i] = lng0 + hb.x / KX; ag.hlat[i] = lat0 + hb.y / KY;
     }
+    // Contagion personne par personne (js/ville-epi.js)
+    const epiCity = window.createCityEpi({ ag, A, places, ratio, lng0, lat0, KX, KY, HALF,
+      now: () => clock.t, localHour: () => localHour(), climate: () => climateAt(lat0, clock.t, epi.p),
+      onSync: m => { if (epi.worker && epi.running) epi.worker.postMessage({ type: 'citySync', ...m }); } });
     function refreshStates(){
-      for (let i = 0; i < A; i++) ag.state[i] = epiStateCPU(ag.hlng[i], ag.hlat[i], ag.u[i]);
+      for (let i = 0; i < A; i++) ag.state[i] = epiCity.st[i];
+    }
+    if (epi.running && epi.p) {
+      epiCity.start(epi.p, null);
+      if (city && city.epi && city.epi.running) epiCity.importState(city.epi.exportState(city.toLngLat), (lng, lat) => [(lng - lng0) * KX, (lat - lat0) * KY]);
+      epi.worker.postMessage({ type: 'cellQuery', id: 'init', lat: lat0, lon: lng0 });
     }
     refreshStates();
     // Où doit se trouver l'habitant i à l'heure locale h ?
     function wanted(i, h){
-      const st = ag.state[i];
-      if (st === 4 || (st === 2 && ag.stayHome[i])) return ag.home[i];   // morts et malades alités
+      const o = epiCity.override(i, h); if (o >= 0) return o;          // morts, malades isolés ou hospitalisés, agenda du patient zéro
       if (ag.eveS[i] >= 0 && h >= ag.eveS[i] && h < ag.eveE[i]) return ag.evening[i];
       if (ag.type[i] !== 2 && h >= ag.dep[i] && h < ag.ret[i]) {
         if (ag.lunch[i] && h >= 12.1 && h < 13.2) return ag.errand[i] === ag.work[i] ? ag.work[i] : ag.errand[i];
@@ -1041,7 +1126,7 @@
       for (const m of marks) { if (m < 0) continue; const d = ((h - m) % 24 + 24) % 24; if (d < best) best = d; }
       return best;
     }
-    const localHour = () => { const d = new Date(clock.vt); return ((d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600 + lng0 / 15) % 24 + 24) % 24; };
+    const localHour = () => { const d = new Date(clock.t); return ((d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600 + lng0 / 15) % 24 + 24) % 24; };
     const h0 = localHour();
     // Au départ, chacun est là où il était 1 h 30 plus tôt ; les trajets en cours seront
     // reconstitués (antidatés) dès les premières images.
@@ -1107,8 +1192,12 @@
     let scan = 0;
     let lastStates = 0;
     function update(){
-      const simMs = clock.vt, h = localHour();
-      if (performance.now() - lastStates > 500) { lastStates = performance.now(); refreshStates(); }
+      const simMs = clock.t, h = localHour();
+      if (clock.speed > 0) epiCity.tick();
+      if (performance.now() - lastStates > 400) {
+        lastStates = performance.now(); refreshStates();
+
+      }
       const tStart = performance.now();
       // a) départs (on balaie une partie de la population à chaque image, dans la limite du budget)
       const step = Math.min(A, MOBILE ? 1500 : 4000);
@@ -1142,7 +1231,9 @@
       }
     }
 
-    city = { ready: true, lng0, lat0, half: HALF, mx0, my0, WM, ag, agents: A, ratio, update, built: performance.now() };
+    city = { ready: true, lng0, lat0, half: HALF, mx0, my0, WM, ag, agents: A, ratio, update, built: performance.now(), epi: epiCity, KX, KY,
+      toLngLat: (x, y) => [lng0 + x / KX, lat0 + y / KY], toXY: (lng, lat) => [(lng - lng0) * KX, (lat - lat0) * KY] };
+    applyPendingRelease();
     cityLayer.setCity(city);
     cityBuilding = false;
     console.info(`Ville générée : ${M} nœuds, ${B.length} bâtiments, ${P.length} lieux, ${A} habitants (1 pour ${ratio}) en ${Math.round(performance.now() - t0)} ms`);
@@ -1335,25 +1426,60 @@
     if (spinOn) { busy = false; spin(); } else map.stop();
   };
 
-  /* ============ Catalogue de départ (valeurs indicatives, sans vaccin ni traitement) ============ */
-  const PATHOGENS = [
-    { id:'grippe',   name:'Grippe saisonnière',        type:'Virus',    r0:1.3, inc:2,  inf:4,  ifr:0.001 },
-    { id:'h1n1-1918',name:'Grippe espagnole (1918)',   type:'Virus',    r0:2.0, inc:2,  inf:4,  ifr:0.025 },
-    { id:'covid',    name:'Covid-19 (souche 2020)',     type:'Virus',    r0:2.7, inc:5,  inf:7,  ifr:0.007 },
-    { id:'omicron',  name:'Covid-19 Omicron',          type:'Virus',    r0:8,   inc:3,  inf:5,  ifr:0.002 },
-    { id:'sras',     name:'SRAS (2003)',               type:'Virus',    r0:2.5, inc:5,  inf:10, ifr:0.10 },
-    { id:'rougeole', name:'Rougeole',                  type:'Virus',    r0:15,  inc:11, inf:8,  ifr:0.003 },
-    { id:'varicelle',name:'Varicelle',                 type:'Virus',    r0:10,  inc:14, inf:7,  ifr:0.0002 },
-    { id:'variole',  name:'Variole majeure',           type:'Virus',    r0:5,   inc:12, inf:14, ifr:0.30 },
-    { id:'ebola',    name:'Ebola (Zaïre)',             type:'Virus',    r0:1.8, inc:9,  inf:10, ifr:0.50 },
-    { id:'peste',    name:'Peste pulmonaire',          type:'Bactérie', r0:1.3, inc:3,  inf:3,  ifr:0.90 },
-    { id:'coqueluche',name:'Coqueluche',               type:'Bactérie', r0:14,  inc:8,  inf:21, ifr:0.001 },
-    { id:'diphterie',name:'Diphtérie',                 type:'Bactérie', r0:6,   inc:3,  inf:14, ifr:0.05 }
-  ];
+  /* ============ Agents, profils et outils ============ */
   const SEEDS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
   const fmtN = new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 });
   const fmtFull = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-  const pct = x => { const v = x * 100; return (v >= 10 ? v.toFixed(0) : v >= 0.1 ? String(+v.toFixed(1)) : String(+v.toFixed(2))).replace('.', ',') + ' %'; };
+  const pct = x => { const v = x * 100; return (v >= 10 ? v.toFixed(0) : v >= 0.1 ? String(+v.toFixed(1)) : v > 0 ? String(+v.toFixed(3)) : '0').replace('.', ',') + ' %'; };
+  const CAT_LABEL = { virus: 'Virus', 'bactérie': 'Bactérie', champignon: 'Champignon', parasite: 'Parasite', prion: 'Prion', toxine: 'Toxine', chimique: 'Chimique', hybride: 'Hybride' };
+  // Grandes villes pour les voyages du patient zéro
+  const CITIES = [
+    ['Paris', 48.86, 2.35], ['Londres', 51.51, -0.13], ['New York', 40.71, -74.0], ['Los Angeles', 34.05, -118.24], ['Tokyo', 35.68, 139.69],
+    ['Pékin', 39.9, 116.4], ['Shanghai', 31.23, 121.47], ['Hong Kong', 22.32, 114.17], ['Singapour', 1.35, 103.82], ['Dubaï', 25.2, 55.27],
+    ['Bombay', 19.08, 72.88], ['Delhi', 28.61, 77.21], ['Moscou', 55.76, 37.62], ['Istanbul', 41.01, 28.98], ['Le Caire', 30.04, 31.24],
+    ['Lagos', 6.52, 3.38], ['Johannesburg', -26.2, 28.05], ['São Paulo', -23.55, -46.63], ['Mexico', 19.43, -99.13], ['Bangkok', 13.76, 100.5],
+    ['Sydney', -33.87, 151.21], ['Madrid', 40.42, -3.7], ['Berlin', 52.52, 13.4], ['Rome', 41.9, 12.5], ['Toulouse', 43.6, 1.44]
+  ];
+  function makePathogen(e){
+    const [id, name, cat, r0, inc, inf, ifr, modes, asymp, surv, info, radius] = e;
+    return { id, name, cat, r0, inc, inf, ifr, modes, asymp, surv, info, radius: radius || 0 };
+  }
+  // Propriétés dérivées utilisées par les moteurs
+  function finalize(p){
+    const m = p.modes, w = {};
+    for (const c of 'RACFONSBLZEK') w[c] = m.includes(c) ? 1 : 0;
+    w.V = /[MTP]/.test(m) ? 1 : 0;
+    const chem = p.cat === 'chimique' || p.cat === 'toxine';
+    p.w = w;
+    p.h2h = !chem && p.r0 > 0 && /[RACFONSBMTPLZ]/.test(m);
+    p.vec = /[MTP]/.test(m) && !/[RAC]/.test(m.replace(/[MTP]/g, ''));
+    p.vecMin = m.includes('M') ? 16 : 8;
+    p.release = chem || (!p.h2h && m.includes('E')) ? (m.includes('N') && !m.includes('E') && p.cat !== 'chimique' ? 'aliments' : 'air') : null;
+    if (!p.h2h && !p.release) p.release = m.includes('N') ? 'aliments' : 'air';
+    return p;
+  }
+  // Hybride : combinaison de 2 ou 3 agents
+  function combine(list){
+    if (list.length === 1) return { ...list[0] };
+    const h2h = list.filter(p => p.r0 > 0);
+    const r0s = h2h.map(p => p.r0).sort((a, b) => b - a);
+    return {
+      id: 'hybride', cat: 'hybride', name: 'Hybride : ' + list.map(p => p.name.split(' (')[0]).join(' × '),
+      r0: r0s.length ? +(r0s[0] + 0.15 * r0s.slice(1).reduce((s, x) => s + x, 0)).toFixed(1) : 0,
+      inc: Math.min(...list.map(p => p.inc)), inf: Math.max(...list.map(p => p.inf)),
+      ifr: +(1 - list.reduce((s, p) => s * (1 - p.ifr), 1)).toFixed(4),
+      modes: [...new Set(list.map(p => p.modes).join(''))].join(''),
+      asymp: Math.max(...list.map(p => p.asymp)), surv: Math.max(...list.map(p => p.surv)),
+      radius: Math.max(...list.map(p => p.radius || 0)), info: 'Agent combiné : cumule les modes de transmission de ses parents.'
+    };
+  }
+  // Climat local pour les vecteurs (même formule que le moteur mondial)
+  function climateAt(lat, t, P){
+    const d = new Date(t), doy = Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 0)) / 86400000);
+    const a = Math.abs(lat), seas = Math.cos(2 * Math.PI * (doy - 200) / 365);
+    const T = 27 - 0.42 * Math.max(0, a - 12) + Math.sign(lat || 1) * seas * Math.min(a, 60) / 60 * 11;
+    return Math.max(0, Math.min(1, (T - ((P && P.vecMin) || 14)) / 11));
+  }
 
   /* ============ Avions transportant la maladie ============ */
   const FLIGHT_MS = 3800;
@@ -1435,12 +1561,16 @@
   };
 
   /* ============ Pilotage de l'épidémie ============ */
-  const epi = { worker: null, ready: false, running: false, waiting: false, simT: 0, totals: null, day: 0, hist: [], p: null, place: '', lastFlight: '' };
+  const epi = { worker: null, ready: false, running: false, waiting: false, simT: 0, totals: null, day: 0, hist: [], p: null, place: '', lastFlight: '', log: [] };
   function initEpidemic(){
     epi.worker = new Worker('js/epidemie.js');
     epi.worker.onmessage = ev => {
       const m = ev.data;
-      if (m.type === 'ready') { epi.ready = true; $('epiGo').disabled = false; $('epiGo').textContent = 'Choisir le patient zéro'; }
+      if (m.type === 'ready') { epi.ready = true; $('epiGo').disabled = false; renderSummary(); }
+      else if (m.type === 'cellInfo' && city && city.epi) {
+        if (m.id === 'init') city.epi.initFrom(m);
+        else if (m.N > 0) city.epi.importFromWorld((m.E + m.I) / m.N);   // cas importés depuis le reste de la planète
+      }
       else if (m.type === 'error') { epi.running = false; epi.waiting = false; showSetup(); toast(m.message); }
       else if (m.type === 'state') {
         epi.waiting = false; epi.simT = m.t; epi.totals = m.totals; epi.day = m.day;
@@ -1469,58 +1599,159 @@
   }
 
   /* ============ Interface du panneau ============ */
-  let selected = PATHOGENS[2];
+  const CAT = window.CATALOGUE.map(makePathogen);
+  let selection = [CAT.find(p => p.id === 'covid')], catFilter = 'tout', combineMode = false;
+  const custom = {};
+  let base = null;   // agent (ou hybride) sélectionné avant réglages
+
+  // ---- Onglets
+  function showTab(n){
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', +b.dataset.tab === n));
+    for (const k of [1, 2, 3]) $('tab' + k).hidden = k !== n;
+    if (n === 2) { $('p0Form').hidden = !!base.release; $('dispForm').hidden = !base.release; }
+    if (n === 3) renderSummary();
+    $('epi').scrollTop = 0;
+  }
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(+b.dataset.tab));
+  document.querySelectorAll('[data-next]').forEach(b => b.onclick = () => showTab(+b.dataset.next));
+
+  // ---- Catalogue
+  $('catChips').innerHTML = window.CATEGORIES.map(([id, l]) => `<button class="chip2${id === catFilter ? ' on' : ''}" data-c="${id}">${l}</button>`).join('');
+  $('catChips').querySelectorAll('button').forEach(b => b.onclick = () => { catFilter = b.dataset.c; $('catChips').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderPathList(); });
+  $('pathSearch').oninput = renderPathList;
+  $('combine').onchange = e => { combineMode = e.target.checked; if (!combineMode) selection = selection.slice(0, 1); renderPathList(); applySelection(); };
+  const norm = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const modeTags = m => [...m].map(c => `<i class="mode">${window.MODES[c] || c}</i>`).join('');
   function renderPathList(){
-    $('pathList').innerHTML = PATHOGENS.map(p => `
-      <button class="path${p === selected ? ' on' : ''}" data-id="${p.id}">
+    const q = norm($('pathSearch').value.trim());
+    const list = CAT.filter(p => (catFilter === 'tout' || p.cat === catFilter) && (!q || norm(p.name + ' ' + p.info).includes(q)));
+    $('pathCount').textContent = `${list.length} agent${list.length > 1 ? 's' : ''}`;
+    $('pathList').innerHTML = list.map(p => `
+      <button class="path${selection.includes(p) ? ' on' : ''}" data-id="${p.id}">
         <span class="pn">${p.name}</span>
-        <span class="pm">${p.type} · R₀ ${String(p.r0).replace('.', ',')} · létalité ${pct(p.ifr)}</span>
+        <span class="pm">${CAT_LABEL[p.cat]}${p.r0 > 0 ? ' · R₀ ' + String(p.r0).replace('.', ',') : ' · non contagieux'} · létalité ${pct(p.ifr)}</span>
+        <span class="modes">${modeTags(p.modes)}</span>
       </button>`).join('');
-    $('pathList').querySelectorAll('.path').forEach(b => b.onclick = () => { selected = PATHOGENS.find(p => p.id === b.dataset.id); renderPathList(); fillSliders(); });
+    $('pathList').querySelectorAll('.path').forEach(b => b.onclick = () => {
+      const p = CAT.find(x => x.id === b.dataset.id);
+      if (combineMode) {
+        if (selection.includes(p)) { if (selection.length > 1) selection = selection.filter(x => x !== p); }
+        else selection = [...selection, p].slice(-3);
+      } else selection = [p];
+      renderPathList(); applySelection();
+    });
+  }
+  function applySelection(){
+    base = finalize(combine(selection));
+    $('pathSel').innerHTML = `<b>${base.name}</b><span>${base.info || ''}</span><span class="modes">${modeTags(base.modes)}</span>`;
+    fillSliders();
   }
   const SL = {
-    r0:  { min: 0.5, max: 20, step: 0.1, fmt: v => String(v).replace('.', ',') },
-    inc: { min: 0.5, max: 21, step: 0.5, fmt: v => String(v).replace('.', ',') + ' j' },
-    inf: { min: 1,   max: 30, step: 0.5, fmt: v => String(v).replace('.', ',') + ' j' },
-    ifr: { min: 0,   max: 0.95, step: 0.0001, fmt: pct, toSlider: v => Math.sqrt(v / 0.95) * 1000, fromSlider: s => Math.round(((s / 1000) ** 2) * 0.95 * 10000) / 10000 }
+    r0:    { min: 0, max: 20, step: 0.1, fmt: v => String(v).replace('.', ',') },
+    inc:   { min: 0.01, max: 60, step: 0.01, fmt: v => v < 1 ? Math.round(v * 24 * 60) + ' min' : String(+v.toFixed(1)).replace('.', ',') + ' j', log: true },
+    inf:   { min: 0.05, max: 3650, step: 0.01, fmt: v => v < 1 ? Math.round(v * 24) + ' h' : v >= 365 ? String(+(v / 365).toFixed(1)).replace('.', ',') + ' an(s)' : Math.round(v) + ' j', log: true },
+    ifr:   { min: 0, max: 1, fmt: pct, sq: true },
+    asymp: { min: 0, max: 1, step: 0.01, fmt: v => Math.round(v * 100) + ' %' }
   };
-  const custom = {};
+  const toS = (d, v) => d.log ? Math.log(v / d.min) / Math.log(d.max / d.min) * 1000 : d.sq ? Math.sqrt(v / d.max) * 1000 : v;
+  const fromS = (d, s) => d.log ? d.min * Math.pow(d.max / d.min, s / 1000) : d.sq ? Math.round(((s / 1000) ** 2) * d.max * 10000) / 10000 : s;
   function fillSliders(){
     for (const k of Object.keys(SL)) {
       const el = $('sl-' + k), d = SL[k];
-      custom[k] = selected[k];
-      if (d.toSlider) { el.min = 0; el.max = 1000; el.step = 1; el.value = d.toSlider(selected[k]); }
-      else { el.min = d.min; el.max = d.max; el.step = d.step; el.value = selected[k]; }
-      $('v-' + k).textContent = d.fmt(selected[k]);
+      custom[k] = base[k];
+      if (d.log || d.sq) { el.min = 0; el.max = 1000; el.step = 1; } else { el.min = d.min; el.max = d.max; el.step = d.step; }
+      el.value = toS(d, base[k]);
+      $('v-' + k).textContent = d.fmt(base[k]);
     }
   }
-  for (const k of Object.keys(SL)) {
-    $('sl-' + k).oninput = e => {
-      const d = SL[k]; const v = d.fromSlider ? d.fromSlider(+e.target.value) : +e.target.value;
-      custom[k] = v; $('v-' + k).textContent = d.fmt(v);
-    };
+  for (const k of Object.keys(SL)) $('sl-' + k).oninput = e => { const d = SL[k], v = fromS(d, +e.target.value); custom[k] = v; $('v-' + k).textContent = d.fmt(v); };
+
+  // ---- Profil du patient zéro
+  const prof = {};
+  $('p0Prof').innerHTML = window.PROFESSIONS.map(p => `<option value="${p[0]}">${p[1]}</option>`).join('');
+  $('p0Preset').innerHTML = Object.entries(window.PRESETS).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
+  $('p0Lieux').innerHTML = window.LIEUX.map(l => `<button class="chip2" data-l="${l[0]}">${l[1]}</button>`).join('');
+  $('p0Dest').innerHTML = '<option value="">Aucun</option>' + CITIES.map((c, i) => `<option value="${i}">${c[0]}</option>`).join('');
+  $('p0Lieux').querySelectorAll('button').forEach(b => b.onclick = () => {
+    const l = b.dataset.l; prof.lieux = prof.lieux.includes(l) ? prof.lieux.filter(x => x !== l) : [...prof.lieux, l]; drawProf();
+  });
+  const VOY = [0, 0.5, 1, 2, 4, 6, 12, 24, 40, 60, 120];
+  function loadPreset(k){ Object.assign(prof, JSON.parse(JSON.stringify(window.PRESETS[k]))); prof.dest = ''; prof.destDay = 3; drawProf(); }
+  function drawProf(){
+    $('p0Age').value = prof.age; $('v-age').textContent = prof.age + ' ans';
+    $('p0Prof').value = prof.prof;
+    $('p0Foyer').value = prof.foyer; $('v-foyer').textContent = prof.foyer + (prof.foyer > 1 ? ' personnes' : ' personne');
+    $('p0Contacts').value = prof.contacts; $('v-contacts').textContent = prof.contacts + ' / jour';
+    $('p0Hyg').value = Math.round(prof.hygiene * 100); $('v-hyg').textContent = ['Jamais', 'Rarement', 'Parfois', 'Souvent', 'Toujours'][Math.min(4, Math.floor(prof.hygiene * 5))];
+    $('p0Mask').value = prof.mask ? '1' : '0';
+    $('p0Transport').value = prof.transport;
+    $('p0Lieux').querySelectorAll('button').forEach(b => b.classList.toggle('on', prof.lieux.includes(b.dataset.l)));
+    $('p0Part').value = prof.partenaires; $('v-part').textContent = prof.partenaires;
+    $('p0Animaux').value = prof.animaux;
+    const vi = VOY.reduce((b, v, i) => Math.abs(v - prof.voyages) < Math.abs(VOY[b] - prof.voyages) ? i : b, 0);
+    $('p0Voy').value = vi; $('v-voy').textContent = prof.voyages === 0 ? 'jamais' : prof.voyages < 1 ? '1 tous les 2 ans' : prof.voyages + ' / an';
+    $('p0Dest').value = prof.dest; $('p0Day').value = prof.destDay; $('v-day').textContent = 'dans ' + prof.destDay + ' j';
+    $('p0Iso').value = prof.isolement; $('p0Cache').checked = !!prof.cache;
+  }
+  const bindP = (id, key, f) => $(id).oninput = $(id).onchange = e => { prof[key] = f(e.target); drawProf(); };
+  bindP('p0Age', 'age', t => +t.value); bindP('p0Prof', 'prof', t => t.value); bindP('p0Foyer', 'foyer', t => +t.value);
+  bindP('p0Contacts', 'contacts', t => +t.value); bindP('p0Hyg', 'hygiene', t => +t.value / 100); bindP('p0Mask', 'mask', t => +t.value);
+  bindP('p0Transport', 'transport', t => t.value); bindP('p0Part', 'partenaires', t => +t.value); bindP('p0Animaux', 'animaux', t => t.value);
+  bindP('p0Voy', 'voyages', t => VOY[+t.value]); bindP('p0Dest', 'dest', t => t.value); bindP('p0Day', 'destDay', t => +t.value);
+  bindP('p0Iso', 'isolement', t => t.value); bindP('p0Cache', 'cache', t => t.checked);
+  $('p0Preset').onchange = e => loadPreset(e.target.value);
+  loadPreset('normal');
+
+  // Effet global du profil : contacts supplémentaires au début et voyages prévus
+  function profileToWorld(P){
+    const L = prof.lieux.reduce((s, id) => s + ((window.LIEUX.find(l => l[0] === id) || [0, 0, 0, 1])[3] - 1) * 0.25, 0);
+    const pr = window.PROFESSIONS.find(p => p[0] === prof.prof) || window.PROFESSIONS[0];
+    const boost = (prof.contacts / 12) * (1 + L) * (0.6 + 0.4 * pr[5]) * (prof.mask ? 0.6 : 1) * (1 - 0.3 * prof.hygiene) * (prof.cache ? 1.2 : 1);
+    const window_ = P.inc + P.inf, trips = [];
+    const nTrips = poissonJS(prof.voyages * Math.min(window_, 60) / 365);
+    for (let k = 0; k < nTrips; k++) { const c = CITIES[Math.floor(Math.random() * CITIES.length)]; trips.push({ day: Math.random() * Math.min(window_, 60), lat: c[1], lon: c[2], name: c[0] }); }
+    if (prof.dest !== '') { const c = CITIES[+prof.dest]; trips.push({ day: prof.destDay, lat: c[1], lon: c[2], name: c[0] }); }
+    return { boost: Math.min(2.5, Math.max(0.5, boost)), trips: trips.filter(t => t.day <= window_ + 1) };
+  }
+  function poissonJS(l){ let k = 0, p = 1; const L = Math.exp(-l); do { k++; p *= Math.random(); } while (p > L && k < 200); return k - 1; }
+
+  // ---- Dispersion (agents chimiques / environnementaux)
+  const disp = { qty: 1, wind: 3, dir: null };
+  $('dQty').onchange = e => disp.qty = +e.target.value;
+  $('dWind').onchange = e => disp.wind = +e.target.value;
+  $('dDir').onchange = e => disp.dir = e.target.value === '' ? null : +e.target.value * Math.PI / 180;
+
+  // ---- Résumé avant libération
+  function currentPathogen(){ return finalize({ ...base, ...custom, name: base.name }); }
+  function renderSummary(){
+    const P = currentPathogen();
+    $('sumText').innerHTML = `<b>${P.name}</b><br>` + (P.release
+      ? `Dispersion ${P.release === 'aliments' ? 'dans des aliments' : 'dans l’air'} · létalité ${pct(P.ifr)} · ${['', 'faible', 'moyenne', '', 'massive'][disp.qty] || ''} quantité`
+      : `R₀ ${String(+P.r0.toFixed(1)).replace('.', ',')} · incubation ${SL.inc.fmt(P.inc)} · contagion ${SL.inf.fmt(P.inf)} · létalité ${pct(P.ifr)}<br>Patient zéro : ${prof.age} ans, ${$('p0Prof').selectedOptions[0].text.toLowerCase()}, ${prof.contacts} contacts/jour`);
+    $('seedRow').hidden = !!P.release;
+    $('epiGo').textContent = P.release ? 'Choisir le point de dispersion' : 'Choisir le patient zéro';
   }
   $('sl-seed').oninput = e => $('v-seed').textContent = SEEDS[+e.target.value];
   $('v-seed').textContent = SEEDS[+$('sl-seed').value];
-  renderPathList(); fillSliders();
+  renderPathList(); applySelection();
 
   function openPanel(open){ $('epi').classList.toggle('open', open); $('bEpi').classList.toggle('on', open); document.body.classList.toggle('epiOpen', open); }
   openPanel(true);
   $('bEpi').onclick = () => openPanel(!$('epi').classList.contains('open'));
   $('epiClose').onclick = () => openPanel(false);
-  function showSetup(){ $('epiSetup').hidden = false; $('epiRun').hidden = true; $('epiTitle').textContent = 'Nouvelle épidémie'; }
+  function showSetup(){ $('epiSetup').hidden = false; $('epiRun').hidden = true; $('epiTitle').textContent = 'Nouvelle épidémie'; showTab(1); }
   function toast(msg){
     const t = $('toast'); t.textContent = msg; t.classList.add('show');
     clearTimeout(toast.tm); toast.tm = setTimeout(() => t.classList.remove('show'), 4000);
   }
 
-  // Placement du patient zéro
-  let placing = false, zeroMarker = null, zeroLngLat = null;
+  // ---- Choix du lieu
+  let placing = false, zeroMarker = null, zeroLngLat = null, pendingRelease = null, follow = false;
   $('epiGo').onclick = () => {
     if (!epi.ready) return;
     placing = true; openPanel(false);
     $('place').classList.add('show');
-    $('placeText').textContent = 'Touchez la carte pour placer le patient zéro';
+    $('placeText').textContent = currentPathogen().release ? 'Touchez la carte à l’endroit de la dispersion' : 'Touchez la carte pour placer le patient zéro';
     $('placeOk').hidden = true;
     spinOn = false; $('bSpin').classList.remove('on'); map.stop();
   };
@@ -1536,39 +1767,87 @@
       const el = document.createElement('div'); el.className = 'zero';
       zeroMarker = new maplibregl.Marker({ element: el }).setLngLat(e.lngLat).addTo(map);
     } else zeroMarker.setLngLat(e.lngLat);
-    $('placeText').textContent = 'Patient zéro : recherche du lieu…';
+    $('placeText').textContent = 'Recherche du lieu…';
     $('placeOk').hidden = false;
     epi.place = `${e.lngLat.lat.toFixed(2)}°, ${e.lngLat.lng.toFixed(2)}°`;
     try {
-      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=fr&lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`);
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=fr&lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`);
       const j = await r.json(); const a = j.address || {};
       const city = a.city || a.town || a.village || a.municipality || a.county || a.state || '';
-      epi.place = [city, a.country].filter(Boolean).join(', ') || epi.place;
+      epi.place = [a.suburb || a.neighbourhood, city, a.country].filter(Boolean).join(', ') || epi.place;
     } catch (err) {}
-    $('placeText').textContent = 'Patient zéro : ' + epi.place;
+    $('placeText').textContent = (currentPathogen().release ? 'Dispersion : ' : 'Patient zéro : ') + epi.place;
   });
   $('placeOk').onclick = () => {
     if (!zeroLngLat) return;
     placing = false; $('place').classList.remove('show');
-    const P = { name: selected.name, ...custom };
-    epi.p = P; epi.hist = []; epi.lastFlight = '';
+    const P = currentPathogen();
+    epi.p = P; epi.hist = []; epi.lastFlight = ''; epi.log = [];
     epiTex.on = 1;
-    epi.worker.postMessage({ type: 'start', pathogen: { name: P.name, beta: P.r0 / P.inf, sigma: 1 / P.inc, gamma: 1 / P.inf, ifr: P.ifr },
-      lat: zeroLngLat.lat, lon: zeroLngLat.lng, count: SEEDS[+$('sl-seed').value], t: clock.t });
+    const count = P.release ? 0 : SEEDS[+$('sl-seed').value];
+    epi.worker.postMessage({ type: 'start',
+      pathogen: { name: P.name, beta: P.r0 / P.inf, sigma: 1 / Math.max(P.inc, 0.01), gamma: 1 / Math.max(P.inf, 0.02), ifr: P.ifr, h2h: P.h2h, vec: P.vec, vecMin: P.vecMin },
+      lat: zeroLngLat.lat, lon: zeroLngLat.lng, count, t: clock.t, p0: P.release ? null : profileToWorld(P) });
     epi.simT = clock.t; epi.running = true; epi.waiting = true;
+    // Démarrage personne par personne : on descend dans la rue
+    pendingRelease = { lng: zeroLngLat.lng, lat: zeroLngLat.lat, count, prof: P.release ? null : JSON.parse(JSON.stringify(prof)), disp: { ...disp } };
+    if (city) city.epi.start(P, null);
+    if (!applyPendingRelease()) {
+      pauseSpin(15000);
+      map.flyTo({ center: zeroLngLat, zoom: 15.6, pitch: 35, bearing: -15, duration: 4500, essential: true });
+    }
     $('epiSetup').hidden = true; $('epiRun').hidden = false; $('epiTitle').textContent = P.name;
-    $('runPlace').textContent = 'Patient zéro : ' + epi.place + ' · ' + fmtFull.format(SEEDS[+$('sl-seed').value]) + ' personne(s)';
+    $('runPlace').textContent = (P.release ? 'Dispersion : ' : 'Patient zéro : ') + epi.place + (count ? ' · ' + fmtFull.format(count) + ' personne(s)' : '');
     $('runState').textContent = '';
-    setSpeed(3600);
-    openPanel(true);
+    setSpeed(60);
+    follow = true; $('bFollow').classList.toggle('on', follow);
+    $('bFollow').textContent = P.release === 'air' ? '◎ Suivre le nuage' : P.release ? '◎ Suivre' : '◎ Suivre le patient zéro';
+    openPanel(!MOBILE);
   };
+  // Applique le patient zéro / la dispersion dans la ville simulée dès qu'elle couvre le lieu choisi
+  function applyPendingRelease(){
+    const R = pendingRelease; if (!R || !city || !epi.running) return false;
+    const [x, y] = city.toXY(R.lng, R.lat);
+    if (Math.abs(x) > city.half * 0.9 || Math.abs(y) > city.half * 0.9) return false;
+    pendingRelease = null;
+    if (!city.epi.running) city.epi.start(epi.p, null);
+    if (epi.p.release) { city.epi.release(x, y, R.disp); epi.log.push(epi.p.release === 'aliments' ? 'Aliments contaminés près du point choisi' : 'Nuage libéré'); }
+    else city.epi.setPatientZero(R.prof, x, y, R.count, false);
+    return true;
+  }
   $('epiNew').onclick = () => {
     epi.running = false; epi.worker.postMessage({ type: 'stop' });
     epiTex.on = 0; epiTex.data.fill(0); epiTex.r0 = 0; epiTex.r1 = EPI_H;
     if (zeroMarker) { zeroMarker.remove(); zeroMarker = null; }
+    if (city) city.epi.stop();
+    pendingRelease = null; follow = false;
     epi.totals = null; map.triggerRepaint();
     showSetup();
   };
+  $('bFollow').onclick = () => { follow = !follow; $('bFollow').classList.toggle('on', follow); };
+
+  // Suivi du patient zéro et dessin des nuages (4 fois par seconde)
+  setInterval(() => {
+    if (!city || !city.epi) return;
+    const E = city.epi;
+    if (E.p0 >= 0 && zeroMarker) {
+      const ll = city.toLngLat(city.ag.x[E.p0], city.ag.y[E.p0]);
+      zeroMarker.setLngLat(ll);
+      zeroMarker.getElement().classList.toggle('dead', E.st[E.p0] === 4);
+      if (follow && !map.isMoving() && map.getZoom() > 12) map.easeTo({ center: ll, duration: 240, easing: t => t });
+    }
+    const src = map.getSource('nuages'); if (!src) return;
+    const feats = [], shapes = E.cloudShapes(clock.t);
+    if (follow && epi.p && epi.p.release && shapes.length && !map.isMoving()) map.easeTo({ center: city.toLngLat(shapes[0].x, shapes[0].y), duration: 240, easing: t => t });
+    for (const c of shapes) {
+      for (const [k, op] of [[1, 0.2], [0.62, 0.26], [0.32, 0.34]]) {
+        const ring = []; const r = c.r * k * 1.6;
+        for (let a = 0; a <= 48; a++) { const t = a / 48 * 2 * Math.PI; ring.push(city.toLngLat(c.x + Math.cos(t) * r, c.y + Math.sin(t) * r)); }
+        feats.push({ type: 'Feature', properties: { o: op * c.a, col: c.cat === 'chimique' ? '#c8dc3c' : c.cat === 'toxine' ? '#c58cff' : '#c9a26b' }, geometry: { type: 'Polygon', coordinates: [ring] } });
+      }
+    }
+    src.setData({ type: 'FeatureCollection', features: feats });
+  }, 250);
 
   function drawStats(){
     const T = epi.totals; if (!T) return;
@@ -1579,7 +1858,12 @@
     $('stD').textContent = fmtN.format(Math.round(T.D));
     $('stS').textContent = fmtN.format(Math.round(T.S));
     $('stC').textContent = fmtN.format(Math.round(T.cases));
-    $('lastEvent').textContent = epi.lastFlight;
+    $('lastEvent').textContent = (epi.log && epi.log.length ? epi.log[epi.log.length - 1] : '') || epi.lastFlight;
+    if (city && city.epi && city.epi.running) {
+      const c = city.epi.counts, k = city.ratio;
+      $('cityLine').textContent = `Dans ce quartier (personne par personne) : ${fmtN.format((c[1] + c[2]) * k)} contaminés · ${fmtN.format(c[4] * k)} morts`;
+      if (city.epi.log.length) { epi.log.push(...city.epi.log); city.epi.log.length = 0; }
+    } else $('cityLine').textContent = '';
     // courbe : personnes infectées (orange-rouge) et morts cumulés (gris)
     const cv = $('spark'), g = cv.getContext('2d'), w = cv.width = cv.clientWidth * 2, h = cv.height = cv.clientHeight * 2;
     g.clearRect(0, 0, w, h);

@@ -21,6 +21,8 @@ let peoplePerDot = 6000;
 let flights = [];
 let totals = { S: 0, E: 0, I: 0, R: 0, D: 0, cases: 0 };
 let history = [];
+let cellLat = null, climate = null, climateDay = -1;
+let boost = { cell: -1, until: 0, factor: 1 }, trips = [];
 let lastPost = 0;
 
 /* ---------- Aléatoire ---------- */
@@ -54,6 +56,9 @@ async function init(base, ppd){
   const pop = new Float32Array(cb, 4 + 4 * n, n);
   N = new Float64Array(pop);
   S = new Float64Array(pop); E = new Float64Array(n); I = new Float64Array(n); R = new Float64Array(n); D = new Float64Array(n);
+  cellLat = new Float32Array(n);
+  for (let i = 0; i < n; i++) cellLat[i] = 90 - (Math.floor(cellIdx[i] / W) + 0.5) * 0.25;
+  climate = new Float32Array(n).fill(1);
   dense = new Int32Array(W * H).fill(-1);
   for (let i = 0; i < n; i++) dense[cellIdx[i]] = i;
   // Voisinage : les 8 cellules autour (déplacements quotidiens)
@@ -88,6 +93,19 @@ async function init(base, ppd){
   postMessage({ type: 'ready', cells: n, airports: A, routes: rt.length });
 }
 
+// Aptitude du climat aux vecteurs (moustiques, tiques, puces) : température moyenne
+// approchée par la latitude et la saison (hémisphère nord / sud).
+function updateClimate(){
+  const d = new Date(simT), doy = Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 0)) / 86400000);
+  if (doy === climateDay) return; climateDay = doy;
+  const seas = Math.cos(2 * Math.PI * (doy - 200) / 365);
+  const need = P.vecMin || 14;
+  for (let i = 0; i < n; i++) {
+    const lat = cellLat[i], a = Math.abs(lat);
+    const T = 27 - 0.42 * Math.max(0, a - 12) + Math.sign(lat || 1) * seas * Math.min(a, 60) / 60 * 11;
+    climate[i] = Math.max(0, Math.min(1, (T - need) / 11));
+  }
+}
 function activate(i){
   if (!isActive[i]) { isActive[i] = 1; activeList.push(i); }
   if (!wasActive[i]) { wasActive[i] = 1; everList.push(i); }
@@ -96,8 +114,10 @@ function activate(i){
 /* ---------- Un pas de simulation (dt en jours) ---------- */
 let accA = null, touched = [], isTouched = null;
 function step(dt){
+  if (P.vec) updateClimate();
+  if (!P.h2h) { progress(dt); return; }
   if (!accA) { accA = new Float64Array(n); isTouched = new Uint8Array(n); }
-  const beta = P.beta, sig = 1 - Math.exp(-P.sigma * dt), gam = 1 - Math.exp(-P.gamma * dt);
+  const beta = P.beta;
   // 1. Pression infectieuse : chaque cellule contagieuse « arrose » ses voisines
   for (const j of touched) { accA[j] = 0; isTouched[j] = 0; }
   touched = [];
@@ -114,11 +134,20 @@ function step(dt){
   for (const j of touched) {
     const a = accA[j];
     if (S[j] <= 0) continue;
-    const p = 1 - Math.exp(-beta * (a / Neff[j]) * dt);
+    let b = beta * (P.vec ? climate[j] : 1);
+    if (j === boost.cell && simT < boost.until) b *= boost.factor;
+    const p = 1 - Math.exp(-b * (a / Neff[j]) * dt);
     const x = draw(S[j], p);
     if (x > 0) { S[j] -= x; E[j] += x; totals.cases += x; activate(j); }
   }
-  // 3. Évolution de la maladie ; les cellules où l'épidémie est terminée sortent de la liste active
+  progress(dt);
+  // 4. Voyages aériens : les personnes en incubation voyagent normalement, les malades un peu moins
+  airTravel(dt);
+}
+
+function progress(dt){
+  const sig = 1 - Math.exp(-P.sigma * dt), gam = 1 - Math.exp(-P.gamma * dt);
+  // Évolution de la maladie ; les cellules où l'épidémie est terminée sortent de la liste active
   const still = [];
   for (const i of activeList) {
     if (E[i] > 0) { const x = draw(E[i], sig); E[i] -= x; I[i] += x; }
@@ -129,7 +158,16 @@ function step(dt){
     if (E[i] < 0.5 && I[i] < 0.5) { E[i] = I[i] = 0; isActive[i] = 0; } else still.push(i);
   }
   activeList = still;
-  // 4. Voyages aériens : les personnes en incubation voyagent normalement, les malades un peu moins
+  // Voyages prévus du patient zéro
+  for (const t of trips) {
+    if (t.done || simT < t.at) continue;
+    t.done = true;
+    const j = cellAt(t.lat, t.lon);
+    if (j >= 0 && S[j] >= 1) { S[j] -= 1; E[j] += 1; totals.cases += 1; activate(j); if (flights.length < 60) flights.push([t.fromLon, t.fromLat, t.lon, t.lat, 'Patient zéro', t.name]); }
+  }
+}
+
+function airTravel(dt){
   for (let a = 0; a < airCell.length; a++) {
     const c = airCell[a]; if (c < 0 || !isActive[c]) continue;
     const carriers = (E[c] + 0.4 * I[c]) / N[c];
@@ -145,6 +183,17 @@ function step(dt){
       if (flights.length < 60) flights.push([airLon[a], airLat[a], airLon[b], airLat[b], self.airNames[a], self.airNames[b]]);
     }
   }
+}
+
+function cellAt(lat, lon){
+  const row = Math.floor((90 - lat) / 0.25), col = Math.floor((lon + 180) / 0.25);
+  let best = -1, bd = 1e9;
+  for (let dr = -6; dr <= 6; dr++) for (let dc = -6; dc <= 6; dc++) {
+    const rr = row + dr; if (rr < 0 || rr >= H) continue;
+    const j = dense[rr * W + ((col + dc + W) % W)]; if (j < 0) continue;
+    const d = dr * dr + dc * dc; if (d < bd) { bd = d; best = j; }
+  }
+  return best;
 }
 
 /* ---------- Texture d'état (4 octets par cellule) ---------- */
@@ -187,21 +236,35 @@ self.onmessage = async ev => {
     for (const i of everList) { const o = cellIdx[i] * 4; tex[o] = tex[o + 1] = tex[o + 2] = tex[o + 3] = 0; }
     dirtyR0 = 0; dirtyR1 = H;
     isActive.fill(0); wasActive.fill(0); activeList = []; everList = []; totals = { S: 0, E: 0, I: 0, R: 0, D: 0, cases: 0 }; history = [];
+    climateDay = -1;
     // patient zéro : cellule habitée la plus proche
-    const row = Math.floor((90 - m.lat) / 0.25), col = Math.floor((m.lon + 180) / 0.25);
-    let best = -1, bd = 1e9;
-    for (let dr = -6; dr <= 6; dr++) for (let dc = -6; dc <= 6; dc++) {
-      const rr = row + dr; if (rr < 0 || rr >= H) continue;
-      const j = dense[rr * W + ((col + dc + W) % W)]; if (j < 0) continue;
-      const d = dr * dr + dc * dc; if (d < bd) { bd = d; best = j; }
-    }
+    const best = cellAt(m.lat, m.lon);
     if (best < 0) { postMessage({ type: 'error', message: 'Aucune population à cet endroit : choisissez une zone habitée.' }); return; }
-    const k = Math.min(m.count || 1, S[best]);
-    S[best] -= k; I[best] += k; totals.cases = k; activate(best);
     simT = startT = m.t; started = true;
+    if (P.h2h || P.seedLocal) {
+      const k = Math.min(m.count || 1, S[best]);
+      S[best] -= k; I[best] += k; totals.cases = k; activate(best);
+    }
+    // profil du patient zéro : contacts plus nombreux au début, voyages prévus
+    const p0 = m.p0 || {};
+    boost = { cell: best, until: simT + (1 / P.sigma + 1 / P.gamma) * 86400000, factor: Math.max(0.3, p0.boost || 1) };
+    trips = (p0.trips || []).map(t => ({ ...t, at: simT + t.day * 86400000, fromLat: m.lat, fromLon: m.lon, done: false }));
     post();
   }
   else if (m.type === 'stop') { started = false; }
+  // La ville simulée personne par personne fait foi pour sa cellule
+  else if (m.type === 'citySync' && started) {
+    const j = cellAt(m.lat, m.lon); if (j < 0) return;
+    const set = (arr, v) => { if (v > arr[j]) { const d = Math.min(v - arr[j], S[j]); S[j] -= d; arr[j] += d; if (arr !== R && arr !== D) totals.cases += d; } };
+    set(E, m.E); set(I, m.I); set(R, m.R); set(D, m.D);
+    if (E[j] + I[j] > 0.5) activate(j); else if (!wasActive[j] && R[j] + D[j] > 0) { wasActive[j] = 1; everList.push(j); }
+    postMessage({ type: 'cellInfo', id: 'sync', N: N[j], E: E[j], I: I[j], R: R[j], D: D[j] });
+  }
+  // Vrais effectifs d'une cellule (pour initialiser une ville simulée)
+  else if (m.type === 'cellQuery' && n) {
+    const j = cellAt(m.lat, m.lon); if (j < 0) return;
+    postMessage({ type: 'cellInfo', id: m.id, N: N[j], E: E[j], I: I[j], R: R[j], D: D[j] });
+  }
   else if (m.type === 'advance' && started && P) {
     let target = m.t;
     if (target <= simT) return;
