@@ -28,12 +28,12 @@
 
   /* ---------- Panneaux ---------- */
   .glass{background:var(--panel);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-  #top{position:fixed;left:0;right:0;top:calc(12px + var(--safe-t));display:flex;gap:12px;align-items:flex-start;padding:0 14px;pointer-events:none;z-index:5}
+  #top{position:fixed;left:0;right:240px;top:calc(12px + var(--safe-t));display:flex;gap:12px;align-items:flex-start;padding:0 14px;pointer-events:none;z-index:5}
   #top > *{pointer-events:auto}
-  #brand{padding:10px 16px;display:flex;flex-direction:column;justify-content:center;min-height:48px}
+  #brand{padding:10px 16px;margin-right:auto;display:flex;flex-direction:column;justify-content:center;min-height:48px}
   #brand b{font-family:"Barlow Condensed";font-weight:700;letter-spacing:.32em;font-size:20px;line-height:1}
   #brand span{font-size:10.5px;color:var(--muted);letter-spacing:.08em;margin-top:4px;text-transform:uppercase}
-  #searchWrap{flex:1;max-width:520px;position:relative;margin:0 auto}
+  #searchWrap{flex:1;max-width:460px;position:relative;margin:0 auto 0 0}
   #search{display:flex;align-items:center;gap:10px;padding:0 14px;height:48px}
   #search svg{flex:none;opacity:.7}
   #q{flex:1;background:none;border:0;outline:0;color:var(--text);font:500 15px Inter,sans-serif;min-width:0}
@@ -44,7 +44,7 @@
   .res small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
   .res:hover,.res.sel{background:rgba(255,255,255,.07)}
 
-  #dest{position:fixed;left:14px;right:14px;top:calc(72px + var(--safe-t));display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;z-index:4;justify-content:center}
+  #dest{position:fixed;left:14px;right:240px;top:calc(72px + var(--safe-t));display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;z-index:4;justify-content:center}
   #dest::-webkit-scrollbar{display:none}
   .chip{flex:none;padding:8px 13px;font-size:12.5px;font-weight:500;color:var(--text);cursor:pointer;border-radius:999px;white-space:nowrap;transition:background .2s,border-color .2s}
   .chip:hover{background:var(--panel-strong);border-color:rgba(227,183,120,.45)}
@@ -69,6 +69,18 @@
     .glass{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(14,17,22,.84)}
   }
 
+  /* ---------- Horloge ---------- */
+  #clock{position:fixed;right:14px;top:calc(12px + var(--safe-t));padding:10px 12px 8px;z-index:5;min-width:200px}
+  #clockTime{font-family:"Barlow Condensed";font-weight:600;font-size:24px;line-height:1;font-variant-numeric:tabular-nums}
+  #clockDate{font-size:11.5px;color:var(--muted);margin-top:3px;text-transform:capitalize}
+  #speeds{display:flex;gap:4px;margin-top:8px}
+  .spd{flex:1;border:0;border-radius:7px;background:rgba(255,255,255,.05);color:var(--muted);font:600 12px Inter,sans-serif;padding:6px 0;cursor:pointer}
+  .spd.on{background:rgba(227,183,120,.18);color:var(--accent)}
+  #popLine{font-size:11.5px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+  #popLine b{color:var(--text);font-weight:600}
+  #loadBar{height:2px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:6px;overflow:hidden;display:none}
+  #loadBar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+
   /* ---------- Attribution ---------- */
   .maplibregl-ctrl-bottom-right{bottom:calc(84px + var(--safe-b))!important}
   .maplibregl-ctrl-attrib{background:rgba(14,17,22,.6)!important;color:var(--muted)!important;font-size:10px}
@@ -86,20 +98,28 @@
 
   /* ---------- Mobile ---------- */
   @media (max-width:720px){
-    #top{flex-direction:column;gap:8px}
+    #top{flex-direction:column;gap:8px;right:0}
     #brand{display:none}
     #searchWrap{width:100%;max-width:none}
     #search{height:46px}
-    #dest{top:calc(66px + var(--safe-t));justify-content:flex-start}
+    #dest{top:calc(66px + var(--safe-t));justify-content:flex-start;right:14px}
     #bottom{flex-direction:column;align-items:stretch}
-    #readout{display:flex;align-items:baseline;gap:12px;padding:10px 14px;min-width:0}
-    #alt{font-size:24px;margin:0}
-    #coords{margin:0 0 0 auto}
+    #readout{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px;padding:9px 14px;min-width:0}
+    #alt{font-size:23px;margin:0}
+    #coords{margin:0 0 0 auto;white-space:nowrap;font-size:11px}
+    #popLine{flex-basis:100%;margin-top:5px;padding-top:5px}
+    #loadBar{flex-basis:100%}
     #tools{justify-content:space-between}
     .tool{flex:1}
     .tool[data-tip]:hover::after{display:none}
-    .maplibregl-ctrl-bottom-right{bottom:calc(150px + var(--safe-b))!important}
+    .maplibregl-ctrl-bottom-right{bottom:calc(168px + var(--safe-b))!important}
+    #clock{top:calc(112px + var(--safe-t));left:14px;right:auto;min-width:0;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 12px;border-radius:12px}
+    #clockDate{display:none}
+    #clockTime{font-size:20px}
+    #speeds{margin:0}
+    .spd{padding:6px 8px;flex:none}
   }
+  @media (min-width:721px) and (max-width:1100px){ #searchWrap{max-width:360px} }
 </style>
 </head>
 <body>
@@ -109,7 +129,7 @@
 <div id="splash"><div><b>VECTEUR</b><span>Chargement de la planète</span><i></i></div></div>
 
 <div id="top">
-  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 1 — Le globe</span></div>
+  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 2 — La population</span></div>
   <div id="searchWrap">
     <div id="search" class="glass">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -121,11 +141,23 @@
 
 <div id="dest"></div>
 
+<div id="clock" class="glass">
+  <div><div id="clockTime">--:--</div><div id="clockDate">—</div></div>
+  <div id="speeds">
+    <button class="spd" data-s="0" aria-label="Pause">❚❚</button>
+    <button class="spd on" data-s="1">×1</button>
+    <button class="spd" data-s="60">1 min/s</button>
+    <button class="spd" data-s="3600">1 h/s</button>
+  </div>
+</div>
+
 <div id="bottom">
   <div id="readout" class="glass">
     <div id="scaleName">Planète</div>
     <div id="alt">—</div>
     <div id="coords">—</div>
+    <div id="popLine">Chargement de la population…</div>
+    <div id="loadBar"><i></i></div>
   </div>
   <div id="tools" class="glass">
     <button class="tool" id="bHome" data-tip="Vue planète" aria-label="Vue planète">
@@ -139,6 +171,9 @@
     </button>
     <button class="tool on" id="bBuild" data-tip="Bâtiments 3D" aria-label="Bâtiments">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 21V9l5-3v15M9 21V3l7 3v15M16 21v-9l4 2v7M2 21h20"/></svg>
+    </button>
+ <button class="tool on" id="bPop" data-tip="Population" aria-label="Population">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="8" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="17" cy="10" r="1.6"/><circle cx="8" cy="14" r="1.6"/><circle cx="14" cy="15" r="1.6"/><circle cx="19" cy="17" r="1.3"/><circle cx="5" cy="19" r="1.3"/><circle cx="11" cy="20" r="1.1"/></svg>
     </button>
     <button class="tool on" id="bSpin" data-tip="Rotation automatique" aria-label="Rotation">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
@@ -211,12 +246,22 @@
       }
     },
     layers: [
+      { id:'fond', type:'background', paint:{ 'background-color':'#dfe5ea' } },
       { id:'satellite', type:'raster', source:'satellite',
         paint:{ 'raster-fade-duration':250, 'raster-contrast':.06, 'raster-saturation':.06, 'raster-brightness-max':.97 } },
 
       { id:'hillshade', type:'hillshade', source:'hillshadeSrc', maxzoom:11,
         paint:{ 'hillshade-exaggeration':.18, 'hillshade-shadow-color':'rgba(0,0,0,.55)',
                 'hillshade-highlight-color':'rgba(255,255,255,.06)', 'hillshade-accent-color':'rgba(0,0,0,0)' } },
+
+      { id:'buildings-3d', type:'fill-extrusion', source:'omt', 'source-layer':'building', minzoom:14,
+        paint:{
+          'fill-extrusion-color':['interpolate',['linear'],['coalesce',['get','render_height'],0],
+              0,'#d8d2c8', 30,'#cfd3d6', 120,'#bcc6cf', 300,'#a9b8c6'],
+          'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,15.5,['coalesce',['get','render_height'],8]],
+          'fill-extrusion-base':['coalesce',['get','render_min_height'],0],
+          'fill-extrusion-opacity':.9,
+          'fill-extrusion-vertical-gradient':true } },
 
       { id:'boundary-state', type:'line', source:'omt', 'source-layer':'boundary', minzoom:4,
         filter:['all', ['==',['get','admin_level'],4], ['!=',['get','maritime'],1]],
@@ -241,15 +286,6 @@
         paint:{ 'line-color':'rgba(255,224,160,.6)',
                 'line-width':['interpolate',['exponential',1.6],['zoom'],7,.4,12,1.6,16,4,19,12],
                 'line-opacity':['interpolate',['linear'],['zoom'],7,0,9,1] } },
-
-      { id:'buildings-3d', type:'fill-extrusion', source:'omt', 'source-layer':'building', minzoom:14,
-        paint:{
-          'fill-extrusion-color':['interpolate',['linear'],['coalesce',['get','render_height'],0],
-              0,'#d8d2c8', 30,'#cfd3d6', 120,'#bcc6cf', 300,'#a9b8c6'],
-          'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,15.5,['coalesce',['get','render_height'],8]],
-          'fill-extrusion-base':['coalesce',['get','render_min_height'],0],
-          'fill-extrusion-opacity':.9,
-          'fill-extrusion-vertical-gradient':true } },
 
       { id:'label-road', type:'symbol', source:'omt', 'source-layer':'transportation_name', minzoom:15,
         layout:{ 'symbol-placement':'line', 'text-field':NAME, 'text-font':['Noto Sans Regular'],
@@ -299,6 +335,7 @@
     canvasContextAttributes: { antialias: !MOBILE },
     fadeDuration: MOBILE ? 150 : 300
   });
+  window.vecteur = { map, get clock(){ return clock; } };
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
   const $ = id => document.getElementById(id);
@@ -317,16 +354,281 @@
   map.on('zoomend', syncTerrain);
   map.on('moveend', syncTerrain);
 
-  map.on('load', () => {
+  // 'style.load' arrive dès que le style est prêt (sans attendre toutes les tuiles)
+  let started = false;
+  map.on('style.load', start);
+  map.on('load', start);
+  function start(){
+    if (started) return; started = true;
+    try { map.addLayer(nightLayer, 'boundary-state'); } catch (e) { console.warn('nuit', e); }
+    try { map.addLayer(popLayer, 'label-road'); } catch (e) { console.warn('population', e); }
+    loadPopulation().catch(e => { console.warn(e); $('popLine').textContent = 'Population indisponible'; });
     syncTerrain();
     map.once('idle', hideSplash);
     setTimeout(hideSplash, 7000);
     updateHud();
     spin();
-  });
+  }
   map.on('error', e => console.warn('Carte :', e && e.error ? e.error.message : e));
 
-  function hideSplash(){ $('splash').classList.add('hide'); }
+  function hideSplash(){ const s = $('splash'); if (s) s.classList.add('hide'); }
+
+  /* ============ Horloge de simulation ============ */
+  const clock = { t: Date.now(), speed: 1, last: performance.now() };
+  function tickClock(){
+    const now = performance.now();
+    clock.t += (now - clock.last) * clock.speed;
+    clock.last = now;
+  }
+  const fmtTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const fmtDate = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+  function drawClock(){
+    const d = new Date(clock.t);
+    $('clockTime').textContent = fmtTime.format(d);
+    $('clockDate').textContent = fmtDate.format(d);
+  }
+  document.querySelectorAll('.spd').forEach(b => b.onclick = () => {
+    tickClock();
+    clock.speed = +b.dataset.s;
+    document.querySelectorAll('.spd').forEach(x => x.classList.toggle('on', x === b));
+    map.triggerRepaint();
+  });
+
+  // Direction du Soleil (repère terrestre) pour une date donnée — formules astronomiques simplifiées
+  function sunDir(ms){
+    const R = Math.PI / 180, d = ms / 86400000 - 10957.5;
+    const g = (357.529 + 0.98560028 * d) * R;
+    const L = (280.459 + 0.98564736 * d + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * R;
+    const e = (23.439 - 0.00000036 * d) * R;
+    const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+    const dec = Math.asin(Math.sin(e) * Math.sin(L));
+    const gmst = ((18.697374558 + 24.06570982441908 * d) % 24) * 15 * R;
+    const lon = ra - gmst;
+    return [Math.cos(dec) * Math.cos(lon), Math.cos(dec) * Math.sin(lon), Math.sin(dec)];
+  }
+
+  /* ============ Outils WebGL ============ */
+  function compile(gl, vsSrc, fsSrc){
+    const mk = (type, src) => {
+      const sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+      return sh;
+    };
+    const pr = gl.createProgram();
+    gl.attachShader(pr, mk(gl.VERTEX_SHADER, vsSrc));
+    gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, fsSrc));
+    gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
+    pr.loc = {};
+    pr.u = name => (name in pr.loc) ? pr.loc[name] : (pr.loc[name] = gl.getUniformLocation(pr, name));
+    return pr;
+  }
+  function setProjection(gl, pr, pd){
+    gl.uniformMatrix4fv(pr.u('u_projection_matrix'), false, pd.mainMatrix);
+    gl.uniformMatrix4fv(pr.u('u_projection_fallback_matrix'), false, pd.fallbackMatrix);
+    gl.uniform4f(pr.u('u_projection_tile_mercator_coords'), ...pd.tileMercatorCoords);
+    gl.uniform4f(pr.u('u_projection_clipping_plane'), ...pd.clippingPlane);
+    gl.uniform1f(pr.u('u_projection_transition'), pd.projectionTransition);
+  }
+  const GLSL_GEO = `
+    const float V_PI = 3.14159265359;
+    vec3 mercToNormal(vec2 m){
+      float lon = m.x * 2.0 * V_PI - V_PI;
+      float lat = 2.0 * atan(exp(V_PI * (1.0 - 2.0 * m.y))) - V_PI * 0.5;
+      return vec3(cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat));
+    }`;
+
+  /* ============ Couche jour / nuit ============ */
+  const nightLayer = {
+    id: 'nuit', type: 'custom', renderingMode: '2d', programs: {},
+    onAdd(m, gl){
+      this.gl = gl;
+      const NX = 180, NY = 90, v = [];
+      for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
+        const x0 = i / NX, x1 = (i + 1) / NX, y0 = j / NY, y1 = (j + 1) / NY;
+        v.push(x0,y0, x1,y0, x0,y1, x0,y1, x1,y0, x1,y1);
+      }
+      this.count = v.length / 2;
+      this.buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+      this.quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.quad);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+      this.quadProg = compile(gl, `#version 300 es
+        in vec2 a_pos; void main(){ gl_Position = vec4(a_pos, 0.0, 1.0); }`, `#version 300 es
+        precision mediump float; uniform vec4 u_color; out vec4 o;
+        void main(){ o = u_color; }`);
+    },
+    program(gl, sd){
+      let p = this.programs[sd.variantName];
+      if (!p) p = this.programs[sd.variantName] = compile(gl, `#version 300 es
+        ${sd.vertexShaderPrelude}
+        ${sd.define}
+        in vec2 a_pos;
+        out vec3 v_n;
+        ${GLSL_GEO}
+        void main(){ v_n = mercToNormal(a_pos); gl_Position = projectTile(a_pos); }`, `#version 300 es
+        precision highp float;
+        in vec3 v_n; uniform vec3 u_sun; uniform float u_alpha; out vec4 o;
+        void main(){
+          float d = dot(normalize(v_n), u_sun);
+          float night = smoothstep(0.06, -0.14, d);
+          float dusk = smoothstep(0.12, 0.0, d) * smoothstep(-0.16, 0.0, d);
+          vec3 col = mix(vec3(0.004, 0.012, 0.035), vec3(0.28, 0.12, 0.03), dusk * 0.6);
+          o = vec4(col, (night * 0.68 + dusk * 0.12) * u_alpha);
+        }`);
+      return p;
+    },
+    render(gl, a){
+      const z = map.getZoom(), sun = this.sun || sunDir(clock.t);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.disable(gl.DEPTH_TEST);
+      const meshA = 1 - Math.min(Math.max(z - 6, 0), 1);
+      if (meshA > 0) {
+        const p = this.program(gl, a.shaderData);
+        gl.useProgram(p); setProjection(gl, p, a.defaultProjectionData);
+        gl.uniform3f(p.u('u_sun'), ...sun); gl.uniform1f(p.u('u_alpha'), meshA);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
+        const loc = gl.getAttribLocation(p, 'a_pos');
+        gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.TRIANGLES, 0, this.count);
+        gl.disableVertexAttribArray(loc);
+      }
+      if (meshA < 1) {
+        // Vue rapprochée : simple voile uniforme selon l'heure au centre de l'écran
+        const c = map.getCenter(), R = Math.PI / 180;
+        const n = [Math.cos(c.lat*R)*Math.cos(c.lng*R), Math.cos(c.lat*R)*Math.sin(c.lng*R), Math.sin(c.lat*R)];
+        const d = n[0]*sun[0] + n[1]*sun[1] + n[2]*sun[2];
+        const ss = (e0, e1, x) => { const t = Math.min(Math.max((x - e0) / (e1 - e0), 0), 1); return t * t * (3 - 2 * t); };
+        const night = ss(0.06, -0.14, d), dusk = ss(0.12, 0, d) * ss(-0.16, 0, d);
+        const p = this.quadProg; gl.useProgram(p);
+        const k = 1 - meshA;
+        gl.uniform4f(p.u('u_color'), 0.004 + 0.28*dusk*0.6, 0.012 + 0.12*dusk*0.6, 0.035, (night * 0.62 + dusk * 0.1) * k);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad);
+        const loc = gl.getAttribLocation(p, 'a_pos');
+        gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        gl.disableVertexAttribArray(loc);
+      }
+    }
+  };
+
+  /* ============ Couche population (millions de points) ============ */
+  const PEOPLE_PER_DOT = 6000;
+  const WORLD_POP = 8191988536;
+  const popLayer = {
+    id: 'population', type: 'custom', renderingMode: '2d', programs: {}, count: 0, visible: true,
+    onAdd(m, gl){ this.gl = gl; this.buf = gl.createBuffer(); },
+    upload(arr){
+      const gl = this.gl;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
+      gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
+      this.count = arr.length / 2;
+      map.triggerRepaint();
+    },
+    program(gl, sd){
+      let p = this.programs[sd.variantName];
+      if (!p) p = this.programs[sd.variantName] = compile(gl, `#version 300 es
+        ${sd.vertexShaderPrelude}
+        ${sd.define}
+        in vec2 a_pos;
+        uniform vec3 u_sun; uniform float u_time; uniform float u_size; uniform float u_alpha;
+        out float v_night; out float v_a;
+        ${GLSL_GEO}
+        float hash(float n){ return fract(sin(n) * 43758.5453123); }
+        void main(){
+          float id = float(gl_VertexID);
+          float h1 = hash(id * 0.1371 + 1.3), h2 = hash(id * 0.7193 + 7.1);
+          // on casse la grille de quantification, puis petite errance (≈ quelques centaines de mètres)
+          vec2 p = a_pos + (vec2(h1, h2) - 0.5) / 65535.0;
+          float ph = h1 * 6.2832, sp = 0.4 + h2;
+          p += vec2(cos(u_time * 0.07 * sp + ph), sin(u_time * 0.05 * sp + ph * 1.7)) * (0.45 / 65535.0);
+          gl_Position = projectTile(p);
+          float d = dot(mercToNormal(p), u_sun);
+          v_night = smoothstep(0.04, -0.12, d);
+          v_a = u_alpha * mix(0.75, 1.15, h2);
+          gl_PointSize = u_size * mix(0.75, 1.3, h1);
+        }`, `#version 300 es
+        precision mediump float;
+        in float v_night; in float v_a; out vec4 o;
+        void main(){
+          vec2 c = gl_PointCoord * 2.0 - 1.0;
+          float r = dot(c, c);
+          if (r > 1.0) discard;
+          float f = exp(-r * 2.6);
+          vec3 day = vec3(1.0, 0.97, 0.9);
+          vec3 night = vec3(1.0, 0.72, 0.38);
+          vec3 col = mix(day, night, v_night);
+          float a = v_a * f * mix(0.42, 1.0, v_night);
+          o = vec4(col * a, a);
+        }`);
+      return p;
+    },
+    render(gl, a){
+      if (!this.count || !this.visible) return;
+      const z = map.getZoom(), pr = map.getPixelRatio ? map.getPixelRatio() : (window.devicePixelRatio || 1);
+      const p = this.program(gl, a.shaderData);
+      gl.useProgram(p); setProjection(gl, p, a.defaultProjectionData);
+      gl.uniform3f(p.u('u_sun'), ...(this.sun || sunDir(clock.t)));
+      gl.uniform1f(p.u('u_time'), performance.now() / 1000);
+      const size = Math.min(1.1 + Math.max(z - 1.5, 0) * 0.42, 5.5) * pr;
+      gl.uniform1f(p.u('u_size'), size);
+      gl.uniform1f(p.u('u_alpha'), Math.min(0.32 + Math.max(z - 1, 0) * 0.09, 0.9));
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.disable(gl.DEPTH_TEST);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
+      const loc = gl.getAttribLocation(p, 'a_pos');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.UNSIGNED_SHORT, true, 0, 0);
+      gl.drawArrays(gl.POINTS, 0, this.count);
+      gl.disableVertexAttribArray(loc);
+    }
+  };
+
+  // Chargement progressif des points (téléphone : 450 000 points ; ordinateur : 1,37 million)
+  async function loadPopulation(){
+    const files = MOBILE ? ['data/dots-a.bin'] : ['data/dots-a.bin', 'data/dots-b.bin'];
+    const parts = []; let done = 0;
+    $('loadBar').style.display = 'block';
+    for (const f of files) {
+      const res = await fetch(f);
+      if (!res.ok) throw new Error(f + ' : ' + res.status);
+      const total = +res.headers.get('content-length') || 0;
+      const reader = res.body.getReader(); const chunks = []; let got = 0;
+      for (;;) {
+        const { done: end, value } = await reader.read();
+        if (end) break;
+        chunks.push(value); got += value.length;
+        if (total) $('loadBar').firstChild.style.width = Math.round(((done + got / total) / files.length) * 100) + '%';
+      }
+      const buf = new Uint8Array(got); let o = 0;
+      for (const c of chunks) { buf.set(c, o); o += c.length; }
+      parts.push(buf); done++;
+      const all = new Uint8Array(parts.reduce((s, x) => s + x.length, 0)); o = 0;
+      for (const x of parts) { all.set(x, o); o += x.length; }
+      popLayer.upload(new Uint16Array(all.buffer, 0, all.length >> 1));
+      showPopLine();
+    }
+    $('loadBar').style.display = 'none';
+  }
+  function showPopLine(){
+    const perDot = Math.round(WORLD_POP / popLayer.count / 100) * 100;
+    $('popLine').innerHTML = `<b>${(WORLD_POP / 1e9).toFixed(2).replace('.', ',')} milliards</b> d'humains · 1 point ≈ ${perDot.toLocaleString('fr-FR')} hab.`;
+  }
+
+  // Rafraîchissement : continu quand ça bouge à l'écran, sinon 1 fois par seconde (économie de batterie)
+  let lastSlow = 0;
+  (function frame(now){
+    tickClock();
+    const sun = sunDir(clock.t);
+    nightLayer.sun = sun; popLayer.sun = sun;
+    const live = clock.speed >= 60 || map.getZoom() >= 11;
+    if (live || now - lastSlow > 1000) {
+      if (!live) lastSlow = now;
+      if (!map.isMoving()) map.triggerRepaint();
+      drawClock();
+    }
+    requestAnimationFrame(frame);
+  })(performance.now());
 
   /* ============ Rotation automatique ============ */
   let spinOn = true, busy = false, busyTimer = null;
@@ -412,6 +714,9 @@
     const v = map.getLayoutProperty('buildings-3d', 'visibility') === 'none' ? 'visible' : 'none';
     map.setLayoutProperty('buildings-3d', 'visibility', v);
     $('bBuild').classList.toggle('on', v === 'visible');
+  };
+  $('bPop').onclick = () => {
+    popLayer.visible = !popLayer.visible; $('bPop').classList.toggle('on', popLayer.visible); map.triggerRepaint();
   };
   $('bSpin').onclick = () => {
     spinOn = !spinOn; $('bSpin').classList.toggle('on', spinOn);
