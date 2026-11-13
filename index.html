@@ -81,6 +81,50 @@
   #loadBar{height:2px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:6px;overflow:hidden;display:none}
   #loadBar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 
+  /* ---------- Panneau épidémie ---------- */
+  #epi{position:fixed;right:14px;top:calc(140px + var(--safe-t));width:330px;max-height:calc(100vh - 240px);overflow:auto;z-index:6;padding:14px;display:none;scrollbar-width:thin}
+  #epi.open{display:block}
+  .epiHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .epiHead b{font-family:"Barlow Condensed";font-weight:600;font-size:19px;letter-spacing:.06em;text-transform:uppercase}
+  #epiClose{background:none;border:0;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:2px 6px}
+  .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+  #pathList{display:grid;gap:6px}
+  .path{display:block;text-align:left;width:100%;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);border-radius:10px;padding:9px 11px;cursor:pointer;font-family:inherit}
+  .path.on{border-color:rgba(255,90,70,.7);background:rgba(255,70,50,.1)}
+  .pn{display:block;font-weight:600;font-size:13.5px}
+  .pm{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+  details{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
+  .sl{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;margin-top:9px;font-size:12.5px}
+  .sl input{grid-column:1/3;width:100%;accent-color:#ff5a46}
+  .sl b{font-weight:600;font-variant-numeric:tabular-nums}
+  .note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4}
+  .cta{width:100%;margin-top:14px;border:0;border-radius:10px;padding:13px;font:600 14px Inter,sans-serif;color:#fff;background:linear-gradient(180deg,#e2463a,#b8281f);cursor:pointer;box-shadow:0 6px 18px rgba(200,40,30,.35)}
+  .cta:disabled{opacity:.5;cursor:wait}
+  .cta.sec{background:rgba(255,255,255,.07);box-shadow:none;color:var(--text)}
+  #runPlace,#runState{font-size:12px;color:var(--muted);margin-bottom:6px}
+  #runState{color:var(--accent)}
+  #runDay{font-family:"Barlow Condensed";font-weight:600;font-size:34px;line-height:1;margin:2px 0 10px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .st{background:rgba(255,255,255,.04);border-radius:9px;padding:8px 10px}
+  .st span{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .st i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .st b{display:block;font-family:"Barlow Condensed";font-weight:600;font-size:22px;margin-top:2px;font-variant-numeric:tabular-nums}
+  #spark{width:100%;height:70px;margin-top:10px;display:block}
+  #lastEvent{font-size:12px;color:#ffb3a8;margin-top:6px;min-height:16px}
+  /* placement du patient zéro */
+  #place{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(100px + var(--safe-b));z-index:7;padding:12px 14px;display:flex;align-items:center;gap:10px;opacity:0;pointer-events:none;transition:.25s;max-width:calc(100vw - 28px)}
+  #place.show{opacity:1;pointer-events:auto;transform:translateX(-50%)}
+  #placeText{font-size:13.5px}
+  #place button{border:0;border-radius:8px;padding:9px 13px;font:600 13px Inter,sans-serif;cursor:pointer;white-space:nowrap}
+  #placeOk{background:#d8392d;color:#fff}
+  #placeCancel{background:rgba(255,255,255,.08);color:var(--text)}
+  .zero{width:22px;height:22px;border-radius:50%;background:#ff3b30;border:2px solid #fff;box-shadow:0 0 0 0 rgba(255,59,48,.7);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,59,48,.7)}100%{box-shadow:0 0 0 22px rgba(255,59,48,0)}}
+  #toast{position:fixed;left:50%;top:calc(130px + var(--safe-t));transform:translateX(-50%);z-index:9;padding:10px 14px;font-size:13px;opacity:0;transition:.3s;pointer-events:none}
+  #toast.show{opacity:1}
+  #bEpi.on{color:#ff6b5c;background:rgba(255,80,60,.14)}
+
   /* ---------- Attribution ---------- */
   .maplibregl-ctrl-bottom-right{bottom:calc(84px + var(--safe-b))!important}
   .maplibregl-ctrl-attrib{background:rgba(14,17,22,.6)!important;color:var(--muted)!important;font-size:10px}
@@ -117,7 +161,20 @@
     #clockDate{display:none}
     #clockTime{font-size:20px}
     #speeds{margin:0}
-    .spd{padding:6px 8px;flex:none}
+    .spd{padding:6px 7px;flex:none;font-size:11px}
+    #epi{left:8px;right:8px;width:auto;top:auto;bottom:calc(8px + var(--safe-b));max-height:56vh;border-radius:16px;background:rgba(14,17,22,.97);padding:12px}
+    .stats{grid-template-columns:1fr 1fr 1fr;gap:5px}
+    .st{padding:6px 8px}
+    .st b{font-size:18px}
+    .st span{font-size:10px}
+    #runDay{font-size:26px;margin-bottom:6px}
+    #spark{height:46px}
+    .cta{padding:11px;margin-top:10px}
+    body.epiOpen #bottom, body.epiOpen .maplibregl-ctrl-bottom-right{visibility:hidden}
+    #place{bottom:calc(160px + var(--safe-b));flex-wrap:wrap;left:14px;right:14px;transform:translateY(20px);max-width:none}
+    #place.show{transform:none}
+    #placeText{flex-basis:100%}
+    #place button{flex:1}
   }
   @media (min-width:721px) and (max-width:1100px){ #searchWrap{max-width:360px} }
 </style>
@@ -129,7 +186,7 @@
 <div id="splash"><div><b>VECTEUR</b><span>Chargement de la planète</span><i></i></div></div>
 
 <div id="top">
-  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 2 — La population</span></div>
+  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 3 — L'épidémie</span></div>
   <div id="searchWrap">
     <div id="search" class="glass">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -148,8 +205,45 @@
     <button class="spd on" data-s="1">×1</button>
     <button class="spd" data-s="60">1 min/s</button>
     <button class="spd" data-s="3600">1 h/s</button>
+    <button class="spd" data-s="86400">1 j/s</button>
   </div>
 </div>
+
+<div id="epi" class="glass open">
+  <div class="epiHead"><b id="epiTitle">Nouvelle épidémie</b><button id="epiClose" aria-label="Fermer">×</button></div>
+  <div id="epiSetup">
+    <div class="lbl">Pathogène</div>
+    <div id="pathList"></div>
+    <details>
+      <summary>Réglages avancés (bac à sable)</summary>
+      <label class="sl">Contagiosité R₀ <b id="v-r0"></b><input id="sl-r0" type="range"></label>
+      <label class="sl">Incubation <b id="v-inc"></b><input id="sl-inc" type="range"></label>
+      <label class="sl">Durée de contagion <b id="v-inf"></b><input id="sl-inf" type="range"></label>
+      <label class="sl">Létalité <b id="v-ifr"></b><input id="sl-ifr" type="range"></label>
+    </details>
+    <label class="sl">Personnes inoculées <b id="v-seed"></b><input id="sl-seed" type="range" min="0" max="9" step="1" value="3"></label>
+    <div class="note">Valeurs indicatives tirées de la littérature, sans vaccin, traitement ni mesures sanitaires.</div>
+    <button id="epiGo" class="cta" disabled>Chargement du moteur…</button>
+  </div>
+  <div id="epiRun" hidden>
+    <div id="runPlace"></div>
+    <div id="runDay">Jour 0</div>
+    <div id="runState"></div>
+    <div class="stats">
+      <div class="st"><span><i style="background:#ff2a1f"></i>Malades</span><b id="stI">0</b></div>
+      <div class="st"><span><i style="background:#ff9e1f"></i>En incubation</span><b id="stE">0</b></div>
+      <div class="st"><span><i style="background:#2a2a2e;border:1px solid #777"></i>Morts</span><b id="stD">0</b></div>
+      <div class="st"><span><i style="background:#9de69d"></i>Guéris</span><b id="stR">0</b></div>
+      <div class="st"><span><i style="background:#73edff"></i>Sains</span><b id="stS">0</b></div>
+      <div class="st"><span><i style="background:#fff"></i>Cas au total</span><b id="stC">0</b></div>
+    </div>
+    <canvas id="spark"></canvas>
+    <div id="lastEvent"></div>
+    <button id="epiNew" class="cta sec">Nouvelle épidémie</button>
+  </div>
+</div>
+<div id="place" class="glass"><span id="placeText"></span><button id="placeOk" hidden>☣ Libérer</button><button id="placeCancel">Annuler</button></div>
+<div id="toast" class="glass"></div>
 
 <div id="bottom">
   <div id="readout" class="glass">
@@ -160,6 +254,9 @@
     <div id="loadBar"><i></i></div>
   </div>
   <div id="tools" class="glass">
+    <button class="tool" id="bEpi" data-tip="Épidémie" aria-label="Épidémie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2.2"/><path d="M12 9.8V5.5M12 5.5a3.5 3.5 0 1 0 3 1.7M12 5.5a3.5 3.5 0 1 1-3 1.7M10.1 13.1l-3.7 2.2M6.4 15.3a3.5 3.5 0 1 0 3.4-.2M6.4 15.3a3.5 3.5 0 1 1 .1-3.4M13.9 13.1l3.7 2.2M17.6 15.3a3.5 3.5 0 1 1-3.4-.2M17.6 15.3a3.5 3.5 0 1 0-.1-3.4"/></svg>
+    </button>
     <button class="tool" id="bHome" data-tip="Vue planète" aria-label="Vue planète">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg>
     </button>
@@ -361,7 +458,7 @@
   function start(){
     if (started) return; started = true;
     try { map.addLayer(nightLayer, 'boundary-state'); } catch (e) { console.warn('nuit', e); }
-    try { map.addLayer(popLayer, 'label-road'); map.addLayer(cityLayer, 'label-road'); } catch (e) { console.warn('population', e); }
+    try { map.addLayer(popLayer, 'label-road'); map.addLayer(cityLayer, 'label-road'); map.addLayer(flightLayer); } catch (e) { console.warn('population', e); }
     loadPopulation().catch(e => { console.warn(e); $('popLine').textContent = 'Population indisponible'; });
     syncTerrain();
     map.once('idle', hideSplash);
@@ -374,10 +471,13 @@
   function hideSplash(){ const s = $('splash'); if (s) s.classList.add('hide'); }
 
   /* ============ Horloge de simulation ============ */
-  const clock = { t: Date.now(), speed: 1, last: performance.now() };
+  // t : heure de la simulation ; vt : heure « visuelle » (soleil, trajets), figée au-delà de 1 h/s
+  // pour éviter que la planète clignote jour/nuit chaque seconde.
+  const clock = { t: Date.now(), vt: Date.now(), speed: 1, last: performance.now() };
   function tickClock(){
     const now = performance.now();
     clock.t += (now - clock.last) * clock.speed;
+    if (clock.speed <= 3600) clock.vt = clock.t;
     clock.last = now;
   }
   const fmtTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -387,12 +487,7 @@
     $('clockTime').textContent = fmtTime.format(d);
     $('clockDate').textContent = fmtDate.format(d);
   }
-  document.querySelectorAll('.spd').forEach(b => b.onclick = () => {
-    tickClock();
-    clock.speed = +b.dataset.s;
-    document.querySelectorAll('.spd').forEach(x => x.classList.toggle('on', x === b));
-    map.triggerRepaint();
-  });
+  document.querySelectorAll('.spd').forEach(b => b.onclick = () => setSpeed(+b.dataset.s));
 
   // Direction du Soleil (repère terrestre) pour une date donnée — formules astronomiques simplifiées
   function sunDir(ms){
@@ -438,6 +533,64 @@
       return vec3(cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat));
     }`;
 
+  /* ============ État épidémique partagé avec les shaders ============ */
+  // Texture 1440 × 720 (une case = 0,25°) : R = malades, G = en incubation, B = guéris, A = morts
+  // (proportions encodées en racine carrée pour garder de la précision sur les petites valeurs)
+  const EPI_W = 1440, EPI_H = 720;
+  const epiTex = { data: new Uint8Array(EPI_W * EPI_H * 4), r0: 0, r1: EPI_H, tex: null, on: 0 };
+  function bindEpiTex(gl, pr){
+    if (!epiTex.tex) {
+      epiTex.tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, epiTex.tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, EPI_W, EPI_H, 0, gl.RGBA, gl.UNSIGNED_BYTE, epiTex.data);
+      epiTex.r0 = EPI_H; epiTex.r1 = 0;
+    }
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, epiTex.tex);
+    if (epiTex.r1 > epiTex.r0) {
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, epiTex.r0, EPI_W, epiTex.r1 - epiTex.r0, gl.RGBA, gl.UNSIGNED_BYTE,
+        epiTex.data.subarray(epiTex.r0 * EPI_W * 4, epiTex.r1 * EPI_W * 4));
+      epiTex.r0 = EPI_H; epiTex.r1 = 0;
+    }
+    gl.uniform1i(pr.u('u_state'), 0);
+    gl.uniform1f(pr.u('u_epi'), epiTex.on);
+  }
+  // État d'une personne (0 sain, 1 incubation, 2 malade, 3 guéri, 4 mort) selon sa cellule et un tirage fixe u
+  const GLSL_STATE = `
+    uniform mediump sampler2D u_state; uniform float u_epi;
+    float epiState(vec2 merc, float u){
+      if (u_epi < 0.5) return 0.0;
+      float lon = merc.x * 360.0 - 180.0;
+      float lat = degrees(2.0 * atan(exp(V_PI * (1.0 - 2.0 * merc.y))) - V_PI * 0.5);
+      ivec2 cell = ivec2(clamp(int(floor((lon + 180.0) * 4.0)), 0, 1439), clamp(int(floor((90.0 - lat) * 4.0)), 0, 719));
+      vec4 p = texelFetch(u_state, cell, 0); p = p * p;
+      float c = p.a; if (u < c) return 4.0;
+      c += p.b; if (u < c) return 3.0;
+      c += p.r; if (u < c) return 2.0;
+      c += p.g; if (u < c) return 1.0;
+      return 0.0;
+    }`;
+  function epiStateCPU(lng, lat, u){
+    if (!epiTex.on) return 0;
+    const col = Math.min(1439, Math.max(0, Math.floor((lng + 180) * 4))), row = Math.min(719, Math.max(0, Math.floor((90 - lat) * 4)));
+    const o = (row * EPI_W + col) * 4, d = epiTex.data, q = k => (d[o + k] / 255) ** 2;
+    let c = q(3); if (u < c) return 4;
+    c += q(2); if (u < c) return 3;
+    c += q(0); if (u < c) return 2;
+    c += q(1); if (u < c) return 1;
+    return 0;
+  }
+
   /* ============ Couche jour / nuit ============ */
   const nightLayer = {
     id: 'nuit', type: 'custom', renderingMode: '2d', programs: {},
@@ -479,7 +632,7 @@
       return p;
     },
     render(gl, a){
-      const z = map.getZoom(), sun = this.sun || sunDir(clock.t);
+      const z = map.getZoom(), sun = this.sun || sunDir(clock.vt);
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       gl.disable(gl.DEPTH_TEST);
       const meshA = 1 - Math.min(Math.max(z - 6, 0), 1);
@@ -517,7 +670,7 @@
   // Partie commune aux deux couches de points : rendu d'un point lisible de jour comme de nuit
   const DOT_FS = `#version 300 es
     precision mediump float;
-    in float v_night; in float v_a; in float v_kind; out vec4 o;
+    in float v_night; in float v_a; in float v_kind; in float v_state; out vec4 o;
     void main(){
       vec2 c = gl_PointCoord * 2.0 - 1.0;
       float r = length(c);
@@ -525,9 +678,14 @@
       vec3 day = v_kind > 1.5 ? vec3(1.0, 0.82, 0.30) : vec3(0.45, 0.93, 1.0);
       vec3 night = vec3(1.0, 0.74, 0.40);
       vec3 core = mix(day, night, v_night);
+      float glowK = v_night * 0.6;
+      if (v_state > 3.5)      { core = vec3(0.16, 0.16, 0.18); glowK = 0.0; }          // mort
+      else if (v_state > 2.5) { core = vec3(0.62, 0.90, 0.62); glowK *= 0.5; }         // guéri
+      else if (v_state > 1.5) { core = vec3(1.0, 0.13, 0.10); glowK = 1.0; }          // malade
+      else if (v_state > 0.5) { core = vec3(1.0, 0.62, 0.12); glowK = max(glowK, 0.3); } // en incubation
       float coreA = 1.0 - smoothstep(0.42, 0.62, r);           // cœur net
-      float ring = (1.0 - smoothstep(0.62, 1.0, r)) * (1.0 - v_night * 0.85); // contour sombre (surtout de jour)
-      float glow = exp(-r * r * 3.0) * v_night * 0.6;           // halo la nuit
+      float ring = (1.0 - smoothstep(0.62, 1.0, r)) * (1.0 - v_night * 0.85) * (v_state > 3.5 ? 0.4 : 1.0); // contour sombre
+      float glow = exp(-r * r * 3.0) * glowK;
       vec3 col = core * (coreA + glow);
       float a = max(coreA, max(ring * 0.75, glow));
       o = vec4(col, a) * v_a;
@@ -549,9 +707,10 @@
         ${sd.vertexShaderPrelude}
         ${sd.define}
         in vec2 a_pos; in vec2 a_work;
-        uniform vec3 u_sun; uniform float u_utc; uniform float u_size; uniform float u_alpha;
-        out float v_night; out float v_a; out float v_kind;
+        uniform vec3 u_sun; uniform float u_utc; uniform float u_size; uniform float u_alpha; uniform float u_pass;
+        out float v_night; out float v_a; out float v_kind; out float v_state;
         ${GLSL_GEO}
+        ${GLSL_STATE}
         float hash(float n){ return fract(sin(n) * 43758.5453123); }
         void main(){
           float id = float(gl_VertexID);
@@ -567,14 +726,21 @@
           float dur = clamp(km / 25.0, 0.25, 1.5);
           float dep = 6.3 + h3 * 3.0;          // départ entre 6 h 20 et 9 h 20
           float ret = 16.3 + h4 * 3.2;          // retour entre 16 h 20 et 19 h 30
-          float p = smoothstep(dep, dep + dur, h) * (1.0 - smoothstep(ret, ret + dur, h));
+          v_state = epiState(a_pos, hash(id * 0.9137 + 4.4));
+          // les malades restent souvent chez eux, les morts ne bougent plus
+          float stay = (v_state > 3.5 || (v_state > 1.5 && v_state < 2.5 && h4 < 0.6)) ? 0.0 : 1.0;
+          float p = stay * smoothstep(dep, dep + dur, h) * (1.0 - smoothstep(ret, ret + dur, h));
           vec2 pos = mix(home, work, p);
           gl_Position = projectTile(pos);
           v_night = smoothstep(0.04, -0.12, dot(mercToNormal(pos), u_sun));
           float moving = step(0.02, p) * step(p, 0.98);
           v_kind = moving * 2.0;
           v_a = u_alpha * mix(0.8, 1.0, h2);
-          gl_PointSize = u_size * mix(0.85, 1.2, h1) * (1.0 + moving * 0.15);
+          // 2 passes : d'abord les sains / guéris / morts, puis les malades et personnes en incubation par-dessus
+          bool sick = v_state > 0.5 && v_state < 2.5;
+          if (sick != (u_pass > 0.5)) { gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+          if (!sick && u_epi > 0.5) v_a *= 0.7;
+          gl_PointSize = u_size * mix(0.85, 1.2, h1) * (1.0 + moving * 0.15) * (v_state > 3.5 ? 0.7 : v_state > 1.5 ? 2.0 : v_state > 0.5 ? 1.45 : 1.0);
         }`, DOT_FS);
       return p;
     },
@@ -583,8 +749,9 @@
       const z = map.getZoom(), pr = map.getPixelRatio();
       const p = this.program(gl, a.shaderData);
       gl.useProgram(p); setProjection(gl, p, a.defaultProjectionData);
-      gl.uniform3f(p.u('u_sun'), ...(this.sun || sunDir(clock.t)));
-      const d = new Date(clock.t);
+      gl.uniform3f(p.u('u_sun'), ...(this.sun || sunDir(clock.vt)));
+      bindEpiTex(gl, p);
+      const d = new Date(clock.vt);
       gl.uniform1f(p.u('u_utc'), d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600);
       gl.uniform1f(p.u('u_size'), Math.min(1.5 + Math.max(z - 1.5, 0) * 0.5, 6.5) * pr);
       gl.uniform1f(p.u('u_alpha'), Math.min(0.55 + Math.max(z - 1, 0) * 0.06, 1) * this.fade);
@@ -595,7 +762,8 @@
       gl.vertexAttribPointer(l1, 2, gl.UNSIGNED_SHORT, true, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.wbuf); gl.enableVertexAttribArray(l2);
       gl.vertexAttribPointer(l2, 2, gl.UNSIGNED_SHORT, true, 0, 0);
-      gl.drawArrays(gl.POINTS, 0, this.count);
+      gl.uniform1f(p.u('u_pass'), 0); gl.drawArrays(gl.POINTS, 0, this.count);
+      if (epiTex.on) { gl.uniform1f(p.u('u_pass'), 1); gl.drawArrays(gl.POINTS, 0, this.count); }
       gl.disableVertexAttribArray(l1); gl.disableVertexAttribArray(l2);
     }
   };
@@ -629,6 +797,7 @@
       DOTS = new Uint16Array(h.buffer, 0, h.length >> 1);
       popLayer.upload(DOTS, new Uint16Array(w.buffer, 0, w.length >> 1));
       showPopLine();
+      if (!epi.worker && i === sets.length - 1) initEpidemic();
     }
     $('loadBar').style.display = 'none';
   }
@@ -824,7 +993,8 @@
       jx: new Float32Array(A), jy: new Float32Array(A),
       loc: new Int32Array(A),          // lieu actuel (index dans places)
       trip: new Array(A).fill(null),
-      x: new Float32Array(A), y: new Float32Array(A), kind: new Float32Array(A)
+      x: new Float32Array(A), y: new Float32Array(A), kind: new Float32Array(A),
+      state: new Float32Array(A), u: new Float32Array(A), stayHome: new Uint8Array(A), hlng: new Float32Array(A), hlat: new Float32Array(A)
     };
     const rnd = (a, b) => a + Math.random() * (b - a);
     for (let i = 0; i < A; i++) {
@@ -845,9 +1015,17 @@
       if (Math.random() < 0.22) { ag.eveS[i] = rnd(19, 21.5); ag.eveE[i] = ag.eveS[i] + rnd(1, 2.8); } else ag.eveS[i] = ag.eveE[i] = -1;
       const a = Math.random() * 6.283, d = Math.sqrt(Math.random());
       ag.jx[i] = Math.cos(a) * d; ag.jy[i] = Math.sin(a) * d;
+      ag.u[i] = Math.random(); ag.stayHome[i] = Math.random() < 0.6 ? 1 : 0;
+      ag.hlng[i] = lng0 + hb.x / KX; ag.hlat[i] = lat0 + hb.y / KY;
     }
+    function refreshStates(){
+      for (let i = 0; i < A; i++) ag.state[i] = epiStateCPU(ag.hlng[i], ag.hlat[i], ag.u[i]);
+    }
+    refreshStates();
     // Où doit se trouver l'habitant i à l'heure locale h ?
     function wanted(i, h){
+      const st = ag.state[i];
+      if (st === 4 || (st === 2 && ag.stayHome[i])) return ag.home[i];   // morts et malades alités
       if (ag.eveS[i] >= 0 && h >= ag.eveS[i] && h < ag.eveE[i]) return ag.evening[i];
       if (ag.type[i] !== 2 && h >= ag.dep[i] && h < ag.ret[i]) {
         if (ag.lunch[i] && h >= 12.1 && h < 13.2) return ag.errand[i] === ag.work[i] ? ag.work[i] : ag.errand[i];
@@ -863,7 +1041,7 @@
       for (const m of marks) { if (m < 0) continue; const d = ((h - m) % 24 + 24) % 24; if (d < best) best = d; }
       return best;
     }
-    const localHour = () => { const d = new Date(clock.t); return ((d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600 + lng0 / 15) % 24 + 24) % 24; };
+    const localHour = () => { const d = new Date(clock.vt); return ((d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600 + lng0 / 15) % 24 + 24) % 24; };
     const h0 = localHour();
     // Au départ, chacun est là où il était 1 h 30 plus tôt ; les trajets en cours seront
     // reconstitués (antidatés) dès les premières images.
@@ -927,8 +1105,10 @@
     // ---- 6. Mise à jour à chaque image
     const budgetMs = MOBILE ? 3 : 6, bornAt = performance.now();
     let scan = 0;
+    let lastStates = 0;
     function update(){
-      const simMs = clock.t, h = localHour();
+      const simMs = clock.vt, h = localHour();
+      if (performance.now() - lastStates > 500) { lastStates = performance.now(); refreshStates(); }
       const tStart = performance.now();
       // a) départs (on balaie une partie de la population à chaque image, dans la limite du budget)
       const step = Math.min(A, MOBILE ? 1500 : 4000);
@@ -971,28 +1151,29 @@
 
   const cityLayer = {
     id: 'habitants', type: 'custom', renderingMode: '2d', programs: {}, fade: 0,
-    onAdd(m, gl){ this.gl = gl; this.buf = gl.createBuffer(); this.kbuf = gl.createBuffer(); },
+    onAdd(m, gl){ this.gl = gl; this.buf = gl.createBuffer(); this.kbuf = gl.createBuffer(); this.sbuf = gl.createBuffer(); },
     setCity(c){
       this.c = c; this.pos = new Float32Array(c.agents * 2);
       const gl = this.gl;
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buf); gl.bufferData(gl.ARRAY_BUFFER, this.pos.byteLength, gl.DYNAMIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.kbuf); gl.bufferData(gl.ARRAY_BUFFER, c.agents * 4, gl.DYNAMIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.sbuf); gl.bufferData(gl.ARRAY_BUFFER, c.agents * 4, gl.DYNAMIC_DRAW);
     },
     program(gl, sd){
       let p = this.programs[sd.variantName];
       if (!p) p = this.programs[sd.variantName] = compile(gl, `#version 300 es
         ${sd.vertexShaderPrelude}
         ${sd.define}
-        in vec2 a_pos; in float a_kind;
+        in vec2 a_pos; in float a_kind; in float a_state;
         uniform vec3 u_sun; uniform float u_size; uniform float u_alpha;
-        out float v_night; out float v_a; out float v_kind;
+        out float v_night; out float v_a; out float v_kind; out float v_state;
         ${GLSL_GEO}
         void main(){
           gl_Position = projectTile(a_pos);
           v_night = smoothstep(0.04, -0.12, dot(mercToNormal(a_pos), u_sun));
-          v_kind = a_kind;
-          v_a = u_alpha * (a_kind < 0.5 ? 0.6 : 1.0);
-          gl_PointSize = u_size * (a_kind > 1.5 ? 1.45 : a_kind > 0.5 ? 1.15 : 0.62);
+          v_kind = a_kind; v_state = a_state;
+          v_a = u_alpha * (a_kind < 0.5 && a_state < 0.5 ? 0.6 : 1.0);
+          gl_PointSize = u_size * (a_kind > 1.5 ? 1.45 : a_kind > 0.5 ? 1.15 : 0.62) * (a_state > 1.5 && a_state < 2.5 ? 1.5 : a_state > 0.5 && a_state < 1.5 ? 1.2 : 1.0);
         }`, DOT_FS);
       return p;
     },
@@ -1003,7 +1184,7 @@
       const z = map.getZoom(), pr = map.getPixelRatio();
       const p = this.program(gl, a.shaderData);
       gl.useProgram(p); setProjection(gl, p, a.defaultProjectionData);
-      gl.uniform3f(p.u('u_sun'), ...(popLayer.sun || sunDir(clock.t)));
+      gl.uniform3f(p.u('u_sun'), ...(popLayer.sun || sunDir(clock.vt)));
       gl.uniform1f(p.u('u_size'), Math.min(Math.max(5.2 + (z - 14) * 2.0, 4.2), 13) * pr);
       gl.uniform1f(p.u('u_alpha'), this.fade);
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.DEPTH_TEST);
@@ -1012,8 +1193,11 @@
       gl.enableVertexAttribArray(l1); gl.vertexAttribPointer(l1, 2, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.kbuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, ag.kind);
       gl.enableVertexAttribArray(l2); gl.vertexAttribPointer(l2, 1, gl.FLOAT, false, 0, 0);
+      const l3 = gl.getAttribLocation(p, 'a_state');
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.sbuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, ag.state);
+      gl.enableVertexAttribArray(l3); gl.vertexAttribPointer(l3, 1, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.POINTS, 0, n);
-      gl.disableVertexAttribArray(l1); gl.disableVertexAttribArray(l2);
+      gl.disableVertexAttribArray(l1); gl.disableVertexAttribArray(l2); gl.disableVertexAttribArray(l3);
     }
   };
 
@@ -1038,9 +1222,9 @@
 
   // Rafraîchissement : continu quand ça bouge à l'écran, sinon 1 fois par seconde (économie de batterie)
   let lastSlow = 0;
-  (function frame(now){
+  requestAnimationFrame(function frame(now){
     tickClock();
-    const sun = sunDir(clock.t);
+    const sun = sunDir(clock.vt);
     nightLayer.sun = sun; popLayer.sun = sun;
     const z = map.getZoom();
     // Fondu planète ↔ ville
@@ -1048,6 +1232,7 @@
     if ((cf > 0.5) !== (cityLayer.fade > 0.5)) setTimeout(showPopLine, 0);
     cityLayer.fade = cf; popLayer.fade = 1 - cf;
     if (city && cf > 0) city.update();
+    pumpEpidemic();
     const live = clock.speed >= 60 || z >= 11;
     if (live || now - lastSlow > 1000) {
       if (!live) lastSlow = now;
@@ -1055,7 +1240,7 @@
       drawClock();
     }
     requestAnimationFrame(frame);
-  })(performance.now());
+  });
 
   /* ============ Rotation automatique ============ */
   let spinOn = true, busy = false, busyTimer = null;
@@ -1149,6 +1334,271 @@
     spinOn = !spinOn; $('bSpin').classList.toggle('on', spinOn);
     if (spinOn) { busy = false; spin(); } else map.stop();
   };
+
+  /* ============ Catalogue de départ (valeurs indicatives, sans vaccin ni traitement) ============ */
+  const PATHOGENS = [
+    { id:'grippe',   name:'Grippe saisonnière',        type:'Virus',    r0:1.3, inc:2,  inf:4,  ifr:0.001 },
+    { id:'h1n1-1918',name:'Grippe espagnole (1918)',   type:'Virus',    r0:2.0, inc:2,  inf:4,  ifr:0.025 },
+    { id:'covid',    name:'Covid-19 (souche 2020)',     type:'Virus',    r0:2.7, inc:5,  inf:7,  ifr:0.007 },
+    { id:'omicron',  name:'Covid-19 Omicron',          type:'Virus',    r0:8,   inc:3,  inf:5,  ifr:0.002 },
+    { id:'sras',     name:'SRAS (2003)',               type:'Virus',    r0:2.5, inc:5,  inf:10, ifr:0.10 },
+    { id:'rougeole', name:'Rougeole',                  type:'Virus',    r0:15,  inc:11, inf:8,  ifr:0.003 },
+    { id:'varicelle',name:'Varicelle',                 type:'Virus',    r0:10,  inc:14, inf:7,  ifr:0.0002 },
+    { id:'variole',  name:'Variole majeure',           type:'Virus',    r0:5,   inc:12, inf:14, ifr:0.30 },
+    { id:'ebola',    name:'Ebola (Zaïre)',             type:'Virus',    r0:1.8, inc:9,  inf:10, ifr:0.50 },
+    { id:'peste',    name:'Peste pulmonaire',          type:'Bactérie', r0:1.3, inc:3,  inf:3,  ifr:0.90 },
+    { id:'coqueluche',name:'Coqueluche',               type:'Bactérie', r0:14,  inc:8,  inf:21, ifr:0.001 },
+    { id:'diphterie',name:'Diphtérie',                 type:'Bactérie', r0:6,   inc:3,  inf:14, ifr:0.05 }
+  ];
+  const SEEDS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
+  const fmtN = new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 });
+  const fmtFull = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+  const pct = x => { const v = x * 100; return (v >= 10 ? v.toFixed(0) : v >= 0.1 ? String(+v.toFixed(1)) : String(+v.toFixed(2))).replace('.', ',') + ' %'; };
+
+  /* ============ Avions transportant la maladie ============ */
+  const FLIGHT_MS = 3800;
+  const flightLayer = {
+    id: 'vols', type: 'custom', renderingMode: '2d', programs: {}, list: [],
+    onAdd(m, gl){ this.gl = gl; this.buf = gl.createBuffer(); },
+    add(f){
+      const R = Math.PI / 180;
+      const v = (lon, lat) => [Math.cos(lat * R) * Math.cos(lon * R), Math.cos(lat * R) * Math.sin(lon * R), Math.sin(lat * R)];
+      const a = v(f[0], f[1]), b = v(f[2], f[3]);
+      const ang = Math.acos(Math.min(1, Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
+      if (ang < 0.002) return;
+      this.list.push({ a, b, ang, t0: performance.now(), from: f[4], to: f[5] });
+      if (this.list.length > 160) this.list.shift();
+    },
+    program(gl, sd){
+      let p = this.programs[sd.variantName];
+      if (!p) p = this.programs[sd.variantName] = compile(gl, `#version 300 es
+        ${sd.vertexShaderPrelude}
+        ${sd.define}
+        in vec3 a_v; // x, y mercator ; z = position dans la traînée (1 = avion)
+        in float a_elev;
+        uniform float u_size;
+        out float v_k;
+        void main(){
+          #ifdef GLOBE
+          gl_Position = projectTileFor3D(a_v.xy, a_elev);
+          #else
+          gl_Position = projectTile(a_v.xy);
+          #endif
+          v_k = a_v.z;
+          gl_PointSize = u_size * mix(0.35, 1.0, a_v.z * a_v.z);
+        }`, `#version 300 es
+        precision mediump float;
+        in float v_k; out vec4 o;
+        void main(){
+          vec2 c = gl_PointCoord * 2.0 - 1.0; float r = length(c); if (r > 1.0) discard;
+          vec3 col = mix(vec3(1.0, 0.35, 0.25), vec3(1.0, 0.92, 0.85), step(0.99, v_k));
+          float a = (1.0 - smoothstep(0.3, 1.0, r)) * mix(0.15, 1.0, v_k * v_k);
+          o = vec4(col * a, a);
+        }`);
+      return p;
+    },
+    render(gl, args){
+      const now = performance.now();
+      this.list = this.list.filter(f => now - f.t0 < FLIGHT_MS);
+      if (!this.list.length || map.getZoom() > 9) return;
+      const TR = 26, data = new Float32Array(this.list.length * TR * 4);
+      let o = 0;
+      for (const f of this.list) {
+        const head = Math.min((now - f.t0) / (FLIGHT_MS * 0.82), 1);
+        const tail = Math.max(head - 0.35, 0);
+        const sinA = Math.sin(f.ang);
+        const H = Math.min(f.ang * 6371e3 * 0.12, 1200e3);   // hauteur de l'arc (effet visuel)
+        for (let k = 0; k < TR; k++) {
+          const tt = tail + (head - tail) * (k / (TR - 1));
+          const w1 = Math.sin((1 - tt) * f.ang) / sinA, w2 = Math.sin(tt * f.ang) / sinA;
+          const x = f.a[0] * w1 + f.b[0] * w2, y = f.a[1] * w1 + f.b[1] * w2, z = f.a[2] * w1 + f.b[2] * w2;
+          const lat = Math.asin(Math.max(-1, Math.min(1, z))), lon = Math.atan2(y, x);
+          const latC = Math.max(-1.48, Math.min(1.48, lat));
+          data[o++] = (lon / Math.PI + 1) / 2;
+          data[o++] = (1 - Math.log(Math.tan(Math.PI / 4 + latC / 2)) / Math.PI) / 2;
+          data[o++] = head >= 1 ? (k / (TR - 1)) * 0.6 : k / (TR - 1);
+          data[o++] = Math.sin(Math.PI * tt) * H;
+        }
+      }
+      const p = this.program(gl, args.shaderData);
+      gl.useProgram(p); setProjection(gl, p, args.defaultProjectionData);
+      gl.uniform1f(p.u('u_size'), 7 * map.getPixelRatio());
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.DEPTH_TEST);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf); gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+      const l1 = gl.getAttribLocation(p, 'a_v'), l2 = gl.getAttribLocation(p, 'a_elev');
+      gl.enableVertexAttribArray(l1); gl.vertexAttribPointer(l1, 3, gl.FLOAT, false, 16, 0);
+      gl.enableVertexAttribArray(l2); gl.vertexAttribPointer(l2, 1, gl.FLOAT, false, 16, 12);
+      gl.drawArrays(gl.POINTS, 0, o / 4);
+      gl.disableVertexAttribArray(l1); gl.disableVertexAttribArray(l2);
+      map.triggerRepaint();
+    }
+  };
+
+  /* ============ Pilotage de l'épidémie ============ */
+  const epi = { worker: null, ready: false, running: false, waiting: false, simT: 0, totals: null, day: 0, hist: [], p: null, place: '', lastFlight: '' };
+  function initEpidemic(){
+    epi.worker = new Worker('js/epidemie.js');
+    epi.worker.onmessage = ev => {
+      const m = ev.data;
+      if (m.type === 'ready') { epi.ready = true; $('epiGo').disabled = false; $('epiGo').textContent = 'Choisir le patient zéro'; }
+      else if (m.type === 'error') { epi.running = false; epi.waiting = false; showSetup(); toast(m.message); }
+      else if (m.type === 'state') {
+        epi.waiting = false; epi.simT = m.t; epi.totals = m.totals; epi.day = m.day;
+        if (m.rows) {
+          epiTex.data.set(m.rows, m.r0 * EPI_W * 4);
+          epiTex.r0 = Math.min(epiTex.r0, m.r0); epiTex.r1 = Math.max(epiTex.r1, m.r1);
+        }
+        for (const f of m.flights) flightLayer.add(f);
+        if (m.flights.length) { const f = m.flights[m.flights.length - 1]; epi.lastFlight = `✈ Cas importé : ${f[4]} → ${f[5]}`; }
+        const dd = Math.floor(m.day);
+        if (!epi.hist.length || epi.hist[epi.hist.length - 1].d !== dd) epi.hist.push({ d: dd, I: m.totals.I + m.totals.E, D: m.totals.D });
+        drawStats();
+        map.triggerRepaint();
+        if (m.totals.E + m.totals.I < 0.5 && m.day > 0.5 && epi.running) {
+          epi.running = false;
+          $('runState').textContent = m.totals.cases < 50 ? 'Épidémie éteinte d\'elle-même' : 'Épidémie terminée';
+        }
+      }
+    };
+    epi.worker.postMessage({ type: 'init', base: new URL('.', location.href).href, peoplePerDot: WORLD_POP / (DOTS.length / 2) });
+  }
+  function pumpEpidemic(){
+    if (epi.running && !epi.waiting && clock.speed > 0 && clock.t > epi.simT + 60000) {
+      epi.waiting = true; epi.worker.postMessage({ type: 'advance', t: clock.t });
+    }
+  }
+
+  /* ============ Interface du panneau ============ */
+  let selected = PATHOGENS[2];
+  function renderPathList(){
+    $('pathList').innerHTML = PATHOGENS.map(p => `
+      <button class="path${p === selected ? ' on' : ''}" data-id="${p.id}">
+        <span class="pn">${p.name}</span>
+        <span class="pm">${p.type} · R₀ ${String(p.r0).replace('.', ',')} · létalité ${pct(p.ifr)}</span>
+      </button>`).join('');
+    $('pathList').querySelectorAll('.path').forEach(b => b.onclick = () => { selected = PATHOGENS.find(p => p.id === b.dataset.id); renderPathList(); fillSliders(); });
+  }
+  const SL = {
+    r0:  { min: 0.5, max: 20, step: 0.1, fmt: v => String(v).replace('.', ',') },
+    inc: { min: 0.5, max: 21, step: 0.5, fmt: v => String(v).replace('.', ',') + ' j' },
+    inf: { min: 1,   max: 30, step: 0.5, fmt: v => String(v).replace('.', ',') + ' j' },
+    ifr: { min: 0,   max: 0.95, step: 0.0001, fmt: pct, toSlider: v => Math.sqrt(v / 0.95) * 1000, fromSlider: s => Math.round(((s / 1000) ** 2) * 0.95 * 10000) / 10000 }
+  };
+  const custom = {};
+  function fillSliders(){
+    for (const k of Object.keys(SL)) {
+      const el = $('sl-' + k), d = SL[k];
+      custom[k] = selected[k];
+      if (d.toSlider) { el.min = 0; el.max = 1000; el.step = 1; el.value = d.toSlider(selected[k]); }
+      else { el.min = d.min; el.max = d.max; el.step = d.step; el.value = selected[k]; }
+      $('v-' + k).textContent = d.fmt(selected[k]);
+    }
+  }
+  for (const k of Object.keys(SL)) {
+    $('sl-' + k).oninput = e => {
+      const d = SL[k]; const v = d.fromSlider ? d.fromSlider(+e.target.value) : +e.target.value;
+      custom[k] = v; $('v-' + k).textContent = d.fmt(v);
+    };
+  }
+  $('sl-seed').oninput = e => $('v-seed').textContent = SEEDS[+e.target.value];
+  $('v-seed').textContent = SEEDS[+$('sl-seed').value];
+  renderPathList(); fillSliders();
+
+  function openPanel(open){ $('epi').classList.toggle('open', open); $('bEpi').classList.toggle('on', open); document.body.classList.toggle('epiOpen', open); }
+  openPanel(true);
+  $('bEpi').onclick = () => openPanel(!$('epi').classList.contains('open'));
+  $('epiClose').onclick = () => openPanel(false);
+  function showSetup(){ $('epiSetup').hidden = false; $('epiRun').hidden = true; $('epiTitle').textContent = 'Nouvelle épidémie'; }
+  function toast(msg){
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast.tm); toast.tm = setTimeout(() => t.classList.remove('show'), 4000);
+  }
+
+  // Placement du patient zéro
+  let placing = false, zeroMarker = null, zeroLngLat = null;
+  $('epiGo').onclick = () => {
+    if (!epi.ready) return;
+    placing = true; openPanel(false);
+    $('place').classList.add('show');
+    $('placeText').textContent = 'Touchez la carte pour placer le patient zéro';
+    $('placeOk').hidden = true;
+    spinOn = false; $('bSpin').classList.remove('on'); map.stop();
+  };
+  $('placeCancel').onclick = () => {
+    placing = false; $('place').classList.remove('show');
+    if (zeroMarker) { zeroMarker.remove(); zeroMarker = null; }
+    openPanel(true);
+  };
+  map.on('click', async e => {
+    if (!placing) return;
+    zeroLngLat = e.lngLat;
+    if (!zeroMarker) {
+      const el = document.createElement('div'); el.className = 'zero';
+      zeroMarker = new maplibregl.Marker({ element: el }).setLngLat(e.lngLat).addTo(map);
+    } else zeroMarker.setLngLat(e.lngLat);
+    $('placeText').textContent = 'Patient zéro : recherche du lieu…';
+    $('placeOk').hidden = false;
+    epi.place = `${e.lngLat.lat.toFixed(2)}°, ${e.lngLat.lng.toFixed(2)}°`;
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=fr&lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`);
+      const j = await r.json(); const a = j.address || {};
+      const city = a.city || a.town || a.village || a.municipality || a.county || a.state || '';
+      epi.place = [city, a.country].filter(Boolean).join(', ') || epi.place;
+    } catch (err) {}
+    $('placeText').textContent = 'Patient zéro : ' + epi.place;
+  });
+  $('placeOk').onclick = () => {
+    if (!zeroLngLat) return;
+    placing = false; $('place').classList.remove('show');
+    const P = { name: selected.name, ...custom };
+    epi.p = P; epi.hist = []; epi.lastFlight = '';
+    epiTex.on = 1;
+    epi.worker.postMessage({ type: 'start', pathogen: { name: P.name, beta: P.r0 / P.inf, sigma: 1 / P.inc, gamma: 1 / P.inf, ifr: P.ifr },
+      lat: zeroLngLat.lat, lon: zeroLngLat.lng, count: SEEDS[+$('sl-seed').value], t: clock.t });
+    epi.simT = clock.t; epi.running = true; epi.waiting = true;
+    $('epiSetup').hidden = true; $('epiRun').hidden = false; $('epiTitle').textContent = P.name;
+    $('runPlace').textContent = 'Patient zéro : ' + epi.place + ' · ' + fmtFull.format(SEEDS[+$('sl-seed').value]) + ' personne(s)';
+    $('runState').textContent = '';
+    setSpeed(3600);
+    openPanel(true);
+  };
+  $('epiNew').onclick = () => {
+    epi.running = false; epi.worker.postMessage({ type: 'stop' });
+    epiTex.on = 0; epiTex.data.fill(0); epiTex.r0 = 0; epiTex.r1 = EPI_H;
+    if (zeroMarker) { zeroMarker.remove(); zeroMarker = null; }
+    epi.totals = null; map.triggerRepaint();
+    showSetup();
+  };
+
+  function drawStats(){
+    const T = epi.totals; if (!T) return;
+    $('runDay').textContent = 'Jour ' + Math.floor(epi.day);
+    $('stE').textContent = fmtN.format(Math.round(T.E));
+    $('stI').textContent = fmtN.format(Math.round(T.I));
+    $('stR').textContent = fmtN.format(Math.round(T.R));
+    $('stD').textContent = fmtN.format(Math.round(T.D));
+    $('stS').textContent = fmtN.format(Math.round(T.S));
+    $('stC').textContent = fmtN.format(Math.round(T.cases));
+    $('lastEvent').textContent = epi.lastFlight;
+    // courbe : personnes infectées (orange-rouge) et morts cumulés (gris)
+    const cv = $('spark'), g = cv.getContext('2d'), w = cv.width = cv.clientWidth * 2, h = cv.height = cv.clientHeight * 2;
+    g.clearRect(0, 0, w, h);
+    const H = epi.hist; if (H.length < 2) return;
+    const max = Math.max(...H.map(x => Math.max(x.I, x.D)), 1);
+    const line = (key, col, fill) => {
+      g.beginPath();
+      H.forEach((x, i) => { const px = i / (H.length - 1) * w, py = h - 4 - (x[key] / max) * (h - 8); i ? g.lineTo(px, py) : g.moveTo(px, py); });
+      if (fill) { g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.fillStyle = fill; g.fill(); }
+      else { g.strokeStyle = col; g.lineWidth = 3; g.stroke(); }
+    };
+    line('I', null, 'rgba(255,60,45,.22)'); line('I', '#ff4a3a'); line('D', '#9aa4af');
+  }
+
+  function setSpeed(s){
+    tickClock(); clock.speed = s;
+    document.querySelectorAll('.spd').forEach(x => x.classList.toggle('on', +x.dataset.s === s));
+    map.triggerRepaint();
+  }
 
   /* ============ Recherche de lieux (Nominatim / OpenStreetMap) ============ */
   const q = $('q'), results = $('results');
