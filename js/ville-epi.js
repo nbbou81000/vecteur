@@ -45,8 +45,10 @@ window.createCityEpi = function(ctx){
     mask: new Float32Array(A), hyg: new Float32Array(A).fill(0.5), partner: new Int32Array(A).fill(-1),
     transit: new Uint8Array(A), dose: new Float32Array(A), p0: -1, p0prof: null, agenda: null,
     placeN: new Float32Array(NP), placeInf: new Float32Array(NP), placeCont: new Float32Array(NP), placeKind: new Array(NP),
-    clouds: [], hospitals: [], counts: [0, 0, 0, 0, 0], newCases: 0, log: []
+    clouds: [], hospitals: [], counts: [0, 0, 0, 0, 0], newCases: 0, log: [],
+    level: 0, essential: new Uint8Array(A), maskWear: new Uint8Array(A)
   };
+  for (let i = 0; i < A; i++) { E.essential[i] = Math.random() < 0.25 ? 1 : 0; E.maskWear[i] = Math.random() < 0.65 ? 1 : 0; }
   // ---- lieux typés
   for (let p = 0; p < NP; p++) E.placeKind[p] = KIND[places[p].cls] || KIND[places[p].cls2] || null;
   for (let p = 0; p < NP; p++) if (E.placeKind[p] === 'hopital') E.hospitals.push(p);
@@ -96,6 +98,7 @@ window.createCityEpi = function(ctx){
   E.start = function(P, f){ E.P = P; E.running = true; E.lastT = ctx.now(); E.potEMA = 0; E.placeCont.fill(0); water.fill(0); vec.fill(0); reservoir.fill(0); E.clouds = []; E.fromWorld(f); };
   // État de la cellule mondiale reçu après coup (ville générée pendant une épidémie)
   E.initFrom = function(c){ if (E.running && c.N > 0) E.fromWorld({ e: c.E / c.N, i: c.I / c.N, r: c.R / c.N, d: c.D / c.N }, true); };
+  E.setPathogen = function(P){ if (E.running) E.P = P; };
   E.stop = function(){ E.running = false; E.P = null; E.st.fill(0); E.p0 = -1; E.clouds = []; sync(); };
 
   function decideIso(i){
@@ -223,6 +226,23 @@ window.createCityEpi = function(ctx){
     hospCache.set(i, r); return r;
   }
 
+  /* ---------- Mesures du pays (0 à 4) : masques, fermetures, confinement ---------- */
+  const CLOSED_L3 = new Set(['nuit', 'foule', 'culte', 'sport', 'ecole']);
+  E.setLevel = function(l){ if (l !== E.level) { E.level = l; } };
+  E.restrict = function(i, place){
+    if (!E.running || E.level < 3 || place === ag.home[i]) return place;
+    if (E.level >= 4 && !E.essential[i] && !(E.st[i] === 2 && E.sev[i])) {
+      // confinement : seuls les travailleurs essentiels sortent, plus quelques courses près de chez soi
+      const k = E.placeKind[place];
+      if (k === 'commerce' || k === 'marche' || k === 'hopital') return place;
+      return ag.home[i];
+    }
+    if (CLOSED_L3.has(E.placeKind[place])) return ag.home[i];
+    if (ag.type[i] === 1 && place === ag.work[i]) return ag.home[i];   // écoles fermées
+    return place;
+  };
+  const wearsMask = i => E.mask[i] || (E.level >= 2 && E.maskWear[i]);
+
   /* ---------- Un pas de contagion ---------- */
   const STREET = 4, streetMap = new Map(), transitMap = new Map();
   E.tick = function(){
@@ -243,7 +263,7 @@ window.createCityEpi = function(ctx){
     // 1. Qui est où, qui contamine
     for (let i = 0; i < A; i++) {
       const s = E.st[i]; if (s === 4) continue;
-      const inf = isInfectious(i) * (E.mask[i] ? 0.45 : 1) * (i === E.p0 ? E.social[i] : 1);
+      const inf = isInfectious(i) * (wearsMask(i) && (ag.trip[i] || ag.loc[i] !== ag.home[i]) ? 0.45 : 1) * (i === E.p0 ? E.social[i] : 1);
       if (m.O) hostW[gW(ag.x[i], ag.y[i])]++;
       if (m.V) hostV[gV(ag.x[i], ag.y[i])]++;
       const T = ag.trip[i];
@@ -299,7 +319,7 @@ window.createCityEpi = function(ctx){
     for (let i = 0; i < A; i++) {
       if (E.st[i] !== 0) continue;
       const T = ag.trip[i];
-      const hyg = 1 - 0.7 * E.hyg[i], maskF = E.mask[i] ? 0.5 : 1, soc = E.social[i];
+      const hyg = 1 - 0.7 * Math.min(1, E.hyg[i] + (E.level >= 2 ? 0.2 : 0)), maskF = wearsMask(i) && (T || ag.loc[i] !== ag.home[i]) ? 0.5 : 1, soc = E.social[i];
       let lam = 0, dose = 0;
       if (!T) {
         const p = ag.loc[i], n = placeN[p], inf = placeInf[p] - (isInfectious(i) ? 1 : 0);

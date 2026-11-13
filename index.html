@@ -148,6 +148,53 @@
   #bFollow.on{background:rgba(255,80,60,.18);color:#ff9d92}
   #cityLine{font-size:12px;color:var(--muted);margin-top:6px}
   .zero.dead{background:#333;animation:none}
+  .modes2{display:grid;gap:6px}
+  .modes2 label{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 10px;cursor:pointer;background:rgba(255,255,255,.03)}
+  .modes2 input{accent-color:#ff5a46;grid-row:1/3}
+  .modes2 b{font-size:13.5px}.modes2 small{grid-column:2;color:var(--muted);font-size:11.5px;line-height:1.35}
+  .modes2 label:has(input:checked){border-color:rgba(255,90,70,.6);background:rgba(255,70,50,.08)}
+  .modes2 label:has(input:disabled){opacity:.4}
+  .dnaRow{display:flex;align-items:center;justify-content:space-between;background:rgba(80,200,255,.08);border:1px solid rgba(80,200,255,.25);border-radius:10px;padding:7px 8px 7px 12px;margin:4px 0 8px;font-size:13px}
+  .dnaRow b{font-family:"Barlow Condensed";font-size:20px}
+  .evoBtn{border:0;border-radius:8px;padding:8px 12px;font:600 13px Inter,sans-serif;color:#06222b;background:linear-gradient(180deg,#7fe3ff,#38b6e0);cursor:pointer}
+  .cure{margin:8px 0 2px}.cureTrack{height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+  #cureBar{display:block;height:100%;width:0;background:linear-gradient(90deg,#5fd38a,#b6f0c6);transition:width .5s}
+  #cureTxt{font-size:11.5px;color:var(--muted)} #worldLine{font-size:11.5px;color:var(--muted);margin-bottom:8px}
+  #ticker{position:fixed;left:14px;right:390px;top:calc(122px + var(--safe-t));z-index:5;display:none;align-items:stretch;height:30px;border-radius:8px;overflow:hidden;background:rgba(10,12,16,.85);border:1px solid var(--line)}
+  #ticker.show{display:flex}
+  #ticker .live{background:#d8392d;color:#fff;font:700 11px Inter,sans-serif;letter-spacing:.1em;display:flex;align-items:center;padding:0 10px;flex:none}
+  #ticker .tk{flex:1;overflow:hidden;position:relative}
+  #tickerText{position:absolute;white-space:nowrap;top:0;bottom:0;display:flex;align-items:center;gap:14px;font-size:13px;animation:tick 40s linear infinite;padding-left:14px}
+  #tickerText b{color:var(--accent);margin-right:4px} #tickerText i{color:#d8392d;font-style:normal}
+  @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  #card{position:fixed;left:14px;top:calc(162px + var(--safe-t));width:300px;z-index:7;padding:12px 14px;display:none}
+  #card.show{display:block}
+  .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .cg{background:rgba(255,255,255,.04);border-radius:8px;padding:6px 9px}.cg.wide{grid-column:1/3}
+  .cg span{display:block;font-size:10.5px;color:var(--muted)}.cg b{font-size:14px}
+  .lvls{display:flex;flex-wrap:wrap;gap:4px}.lvls button{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);border-radius:7px;padding:6px 8px;font:500 11.5px Inter,sans-serif;cursor:pointer}
+  .lvls button.on{border-color:#ff5a46;color:#ffb0a6}
+  #evoPanel,#endModal{position:fixed;inset:0;z-index:12;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+  #evoPanel.show,#endModal.show{display:flex}
+  .evoBox{width:min(860px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:16px;background:rgba(14,17,22,.96)}
+  .dnaBig{margin-left:auto;margin-right:10px;font:600 15px Inter,sans-serif;color:#7fe3ff}
+  #evoStats{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:12px}
+  .bar span{font-size:11px;color:var(--muted)}.bar i{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:3px}.bar i b{display:block;height:100%}
+  #evoGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-top:10px}
+  .evo{text-align:left;border:1px solid var(--line);border-radius:10px;padding:10px;background:rgba(255,255,255,.03);color:var(--text);font-family:inherit;cursor:default;display:grid;gap:3px}
+  .evo b{font-size:13.5px}.evo .cost{font-size:12px;color:#7fe3ff;font-weight:600}.evo small{font-size:11.5px;color:var(--muted);line-height:1.35}.evo em{font-size:11px;color:#ffb0a6;font-style:normal}
+  .evo.buy{cursor:pointer;border-color:rgba(127,227,255,.45)}.evo.buy:hover{background:rgba(127,227,255,.08)}
+  .evo.own{border-color:rgba(157,230,157,.5);background:rgba(157,230,157,.07)}.evo.own .cost{color:#9de69d}
+  .evo.lock{opacity:.45}.evo.poor{opacity:.7}.evo.poor .cost{color:var(--muted)}
+  .endBox{width:min(480px,100%);padding:22px;background:rgba(14,17,22,.97);text-align:center}
+  .endBox h2{font-family:"Barlow Condensed";font-size:52px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 6px}
+  .endBox h2.win{color:#ff4a3a}.endBox h2.lose{color:#7fe3ff}
+  .endStats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0}
+  .endStats div{background:rgba(255,255,255,.04);border-radius:8px;padding:8px}.endStats span{display:block;font-size:11px;color:var(--muted)}.endStats b{font-family:"Barlow Condensed";font-size:20px}
+  .bubble{border:0;background:radial-gradient(circle at 35% 30%,#bff3ff,#2aa7d6);width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer;box-shadow:0 0 0 3px rgba(127,227,255,.35),0 6px 16px rgba(0,0,0,.4);animation:pop .4s ease-out}
+  @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+  .float{position:fixed;left:50%;top:40%;transform:translateX(-50%);z-index:13;font:700 18px Inter,sans-serif;color:#7fe3ff;text-shadow:0 2px 8px #000;pointer-events:none;animation:up 1.8s ease-out forwards}
+  @keyframes up{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-60px)}}
 
   /* ---------- Attribution ---------- */
   .maplibregl-ctrl-bottom-right{bottom:calc(84px + var(--safe-b))!important}
@@ -187,6 +234,11 @@
     #speeds{margin:0}
     .spd{padding:6px 7px;flex:none;font-size:11px}
     #pathList{max-height:180px}
+    #ticker{right:14px;top:calc(156px + var(--safe-t));height:28px}
+    #card{left:8px;right:8px;width:auto;top:calc(192px + var(--safe-t))}
+    #evoStats{grid-template-columns:1fr}
+    #evoGrid{grid-template-columns:1fr 1fr}
+    .evo small{display:none}
     #epi{left:8px;right:8px;width:auto;top:auto;bottom:calc(8px + var(--safe-b));max-height:62vh;border-radius:16px;background:rgba(14,17,22,.97);padding:12px}
     .stats{grid-template-columns:1fr 1fr 1fr;gap:5px}
     .st{padding:6px 8px}
@@ -211,7 +263,7 @@
 <div id="splash"><div><b>VECTEUR</b><span>Chargement de la planète</span><i></i></div></div>
 
 <div id="top">
-  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 3 — Contagion</span></div>
+  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 4 — Le jeu</span></div>
   <div id="searchWrap">
     <div id="search" class="glass">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -290,6 +342,17 @@
     </section>
     <section id="tab3" hidden>
       <div id="sumText" class="sel"></div>
+      <div class="lbl">Mode de jeu</div>
+      <div class="modes2">
+        <label><input type="radio" name="mode" value="campagne" checked><b>Campagne</b><small>Gagnez des points ADN, faites évoluer le pathogène, battez l’humanité de vitesse avant le vaccin.</small></label>
+        <label><input type="radio" name="mode" value="bac"><b>Bac à sable</b><small>Points illimités, vous décidez des mesures de chaque pays.</small></label>
+      </div>
+      <div id="goalRow"><label class="fld">Objectif<select id="goalSel" name="goalsel"><option value="infection">Contaminer 95 % de l’humanité</option><option value="extinction">Éradiquer l’humanité</option></select></label></div>
+      <div id="sbRow" hidden>
+        <label class="tog"><input type="checkbox" id="sbNoResp"> Les pays ne réagissent pas</label>
+        <label class="tog"><input type="checkbox" id="sbNoCure"> Pas de vaccin</label>
+        <label class="fld">Vitesse de la recherche<select id="sbResearch"><option value="0.5">Lente</option><option value="1" selected>Normale</option><option value="2">Rapide</option></select></label>
+      </div>
       <label class="sl" id="seedRow">Personnes contaminées au départ <b id="v-seed"></b><input id="sl-seed" type="range" min="0" max="9" step="1" value="0"></label>
       <div class="note">On descend ensuite dans la rue : chaque habitant de la zone est simulé individuellement, et la contagion se fait personne par personne.</div>
       <button id="epiGo" class="cta" disabled>Chargement du moteur…</button>
@@ -297,8 +360,11 @@
   </div>
   <div id="epiRun" hidden>
     <div id="runPlace"></div>
+    <div id="dnaRow" class="dnaRow"><span>🧬 <b id="dnaVal">0</b> points ADN</span><button id="bEvo" class="evoBtn">Évolution</button></div>
     <div id="runDay">Jour 0</div>
     <div id="runState"></div>
+    <div class="cure"><div class="cureTrack"><i id="cureBar"></i></div><span id="cureTxt"></span></div>
+    <div id="worldLine"></div>
     <div class="stats">
       <div class="st"><span><i style="background:#ff2a1f"></i>Malades</span><b id="stI">0</b></div>
       <div class="st"><span><i style="background:#ff9e1f"></i>En incubation</span><b id="stE">0</b></div>
@@ -315,6 +381,17 @@
 </div>
 <div id="place" class="glass"><span id="placeText"></span><button id="placeOk" hidden>☣ Libérer</button><button id="placeCancel">Annuler</button></div>
 <div id="toast" class="glass"></div>
+<div id="ticker"><b class="live">EN DIRECT</b><div class="tk"><div id="tickerText"></div></div></div>
+<div id="card" class="glass"><div class="epiHead"><b id="cardName"></b><button id="cardClose" aria-label="Fermer">×</button></div><div id="cardBody" class="cgrid"></div>
+  <div id="cardLevels" hidden><div class="lbl">Imposer des mesures</div><div class="lvls"><button data-l="0">Aucune</button><button data-l="1">Surveillance</button><button data-l="2">Masques</button><button data-l="3">Fermetures</button><button data-l="4">Confinement</button></div></div></div>
+<div id="evoPanel"><div class="evoBox glass">
+  <div class="epiHead"><b>Évolution</b><span id="evoDna" class="dnaBig"></span><button id="evoClose" aria-label="Fermer">×</button></div>
+  <div id="evoStats"></div>
+  <div id="evoTabs" class="tabs"></div>
+  <div id="evoGrid"></div>
+</div></div>
+<div id="endModal"><div class="endBox glass"><h2 id="endTitle"></h2><div id="endBody"></div>
+  <div class="row2"><button id="endClose" class="cta sec">Continuer à observer</button><button id="endNew" class="cta">Nouvelle partie</button></div></div></div>
 
 <div id="bottom">
   <div id="readout" class="glass">
@@ -354,6 +431,7 @@
 
 <script src="js/catalogue.js"></script>
 <script src="js/ville-epi.js"></script>
+<script src="js/evolution.js"></script>
 <script>
 (() => {
   'use strict';
@@ -1111,6 +1189,9 @@
     // Où doit se trouver l'habitant i à l'heure locale h ?
     function wanted(i, h){
       const o = epiCity.override(i, h); if (o >= 0) return o;          // morts, malades isolés ou hospitalisés, agenda du patient zéro
+      return epiCity.restrict(i, plan(i, h));                           // mesures du pays (fermetures, confinement)
+    }
+    function plan(i, h){
       if (ag.eveS[i] >= 0 && h >= ag.eveS[i] && h < ag.eveE[i]) return ag.evening[i];
       if (ag.type[i] !== 2 && h >= ag.dep[i] && h < ag.ret[i]) {
         if (ag.lunch[i] && h >= 12.1 && h < 13.2) return ag.errand[i] === ag.work[i] ? ag.work[i] : ag.errand[i];
@@ -1567,7 +1648,11 @@
     epi.worker.onmessage = ev => {
       const m = ev.data;
       if (m.type === 'ready') { epi.ready = true; $('epiGo').disabled = false; renderSummary(); }
+      else if (m.type === 'idle') epi.waiting = false;
+      else if (m.type === 'end') showEnd(m);
+      else if (m.type === 'cellInfo' && m.id === 'card') showCountry(m.country);
       else if (m.type === 'cellInfo' && city && city.epi) {
+        if (m.level != null) city.epi.setLevel(m.level);
         if (m.id === 'init') city.epi.initFrom(m);
         else if (m.N > 0) city.epi.importFromWorld((m.E + m.I) / m.N);   // cas importés depuis le reste de la planète
       }
@@ -1582,9 +1667,11 @@
         if (m.flights.length) { const f = m.flights[m.flights.length - 1]; epi.lastFlight = `✈ Cas importé : ${f[4]} → ${f[5]}`; }
         const dd = Math.floor(m.day);
         if (!epi.hist.length || epi.hist[epi.hist.length - 1].d !== dd) epi.hist.push({ d: dd, I: m.totals.I + m.totals.E, D: m.totals.D });
+        epi.countries = m.countries; epi.cure = m.cure; epi.cureDone = m.cureDone; epi.who = m.who; epi.infCountries = m.infCountries;
+        gameEvents(m);
         drawStats();
         map.triggerRepaint();
-        if (m.totals.E + m.totals.I < 0.5 && m.day > 0.5 && epi.running) {
+        if (game.mode !== 'campagne' && m.totals.E + m.totals.I < 0.5 && m.day > 0.5 && epi.running) {
           epi.running = false;
           $('runState').textContent = m.totals.cases < 50 ? 'Épidémie éteinte d\'elle-même' : 'Épidémie terminée';
         }
@@ -1729,6 +1816,7 @@
       ? `Dispersion ${P.release === 'aliments' ? 'dans des aliments' : 'dans l’air'} · létalité ${pct(P.ifr)} · ${['', 'faible', 'moyenne', '', 'massive'][disp.qty] || ''} quantité`
       : `R₀ ${String(+P.r0.toFixed(1)).replace('.', ',')} · incubation ${SL.inc.fmt(P.inc)} · contagion ${SL.inf.fmt(P.inf)} · létalité ${pct(P.ifr)}<br>Patient zéro : ${prof.age} ans, ${$('p0Prof').selectedOptions[0].text.toLowerCase()}, ${prof.contacts} contacts/jour`);
     $('seedRow').hidden = !!P.release;
+    drawModeOpts();
     $('epiGo').textContent = P.release ? 'Choisir le point de dispersion' : 'Choisir le patient zéro';
   }
   $('sl-seed').oninput = e => $('v-seed').textContent = SEEDS[+e.target.value];
@@ -1782,12 +1870,17 @@
     if (!zeroLngLat) return;
     placing = false; $('place').classList.remove('show');
     const P = currentPathogen();
+    game.base = P; game.owned = new Set(); game.marks = new Set(); game.lastTrickle = 0; game.news = []; game.evo = computeEvo();
+    game.dna = game.mode === 'campagne' ? 5 : SANDBOX_DNA;
+    $('ticker').classList.remove('show'); $('tickerText').innerHTML = '';
     epi.p = P; epi.hist = []; epi.lastFlight = ''; epi.log = [];
     epiTex.on = 1;
     const count = P.release ? 0 : SEEDS[+$('sl-seed').value];
     epi.worker.postMessage({ type: 'start',
       pathogen: { name: P.name, beta: P.r0 / P.inf, sigma: 1 / Math.max(P.inc, 0.01), gamma: 1 / Math.max(P.inf, 0.02), ifr: P.ifr, h2h: P.h2h, vec: P.vec, vecMin: P.vecMin },
-      lat: zeroLngLat.lat, lon: zeroLngLat.lng, count, t: clock.t, p0: P.release ? null : profileToWorld(P) });
+      lat: zeroLngLat.lat, lon: zeroLngLat.lng, count, t: clock.t, p0: P.release ? null : profileToWorld(P),
+      game: { mode: game.mode, goal: game.goal, noResponse: $('sbNoResp').checked, noCure: $('sbNoCure').checked, research: +$('sbResearch').value } });
+    $('dnaRow').hidden = !!P.release; drawDNA();
     epi.simT = clock.t; epi.running = true; epi.waiting = true;
     // Démarrage personne par personne : on descend dans la rue
     pendingRelease = { lng: zeroLngLat.lng, lat: zeroLngLat.lat, count, prof: P.release ? null : JSON.parse(JSON.stringify(prof)), disp: { ...disp } };
@@ -1821,6 +1914,7 @@
     if (zeroMarker) { zeroMarker.remove(); zeroMarker = null; }
     if (city) city.epi.stop();
     pendingRelease = null; follow = false;
+    $('ticker').classList.remove('show'); $('card').classList.remove('show');
     epi.totals = null; map.triggerRepaint();
     showSetup();
   };
@@ -1849,9 +1943,199 @@
     src.setData({ type: 'FeatureCollection', features: feats });
   }, 250);
 
+  /* ============ Jeu : mode, points ADN, évolution, actualités, pays, fin de partie ============ */
+  const game = { mode: 'campagne', goal: 'infection', dna: 0, owned: new Set(), evo: null, base: null, marks: new Set(), lastTrickle: 0, news: [] };
+  let COUNTRIES = [];
+  fetch('data/countries.json').then(r => r.json()).then(c => COUNTRIES = c).catch(() => {});
+  const SANDBOX_DNA = 9999;
+
+  // Effets cumulés des améliorations achetées
+  function computeEvo(){
+    const e = { r0: 1, lethal: 0, severity: 0, stealth: 0, cold: 0, heat: 0, drug: 0, cureSlow: 0, air: 0, water: 0, vector: 0, animal: 0, blood: 0, modes: '' };
+    let keep = 1;
+    for (const u of window.EVOLUTION) {
+      if (!game.owned.has(u[0])) continue;
+      const f = u[5];
+      if (f.r0) e.r0 *= 1 + f.r0;
+      if (f.lethal) keep *= 1 - f.lethal;
+      for (const k of ['severity', 'stealth', 'cold', 'heat', 'drug', 'cureSlow', 'air', 'water', 'vector', 'animal', 'blood']) if (f[k]) e[k] += f[k];
+      if (f.modes) e.modes += f.modes;
+    }
+    e.lethal = 1 - keep;
+    for (const k of ['cold', 'heat', 'drug', 'cureSlow', 'air', 'water', 'vector', 'animal', 'blood']) e[k] = Math.min(1, e[k]);
+    return e;
+  }
+  // Pathogène effectif (base + évolution) pour la vue rue
+  function effective(){
+    const b = game.base, e = game.evo || computeEvo();
+    return finalize({ ...b, r0: b.r0 * e.r0, ifr: 1 - (1 - b.ifr) * (1 - e.lethal), asymp: Math.min(0.95, Math.max(0, b.asymp + 0.15 * e.stealth - 0.03 * e.severity)),
+      modes: [...new Set(b.modes + e.modes)].join('') });
+  }
+  function applyEvo(){
+    game.evo = computeEvo();
+    const { modes, ...w } = game.evo;
+    if (epi.worker) epi.worker.postMessage({ type: 'evolve', evo: w });
+    if (city && city.epi && city.epi.running) city.epi.setPathogen(effective());
+    epi.p = effective();
+    drawDNA();
+  }
+  function addDNA(k, why){
+    if (game.mode !== 'campagne' || !epi.running) return;
+    game.dna += k; drawDNA();
+    if (why) floatMsg(`+${k} 🧬 ${why}`);
+  }
+  function drawDNA(){
+    $('dnaVal').textContent = game.mode === 'campagne' ? game.dna : '∞';
+    if ($('evoDna')) $('evoDna').textContent = game.mode === 'campagne' ? game.dna + ' points ADN' : 'Bac à sable : points illimités';
+  }
+  function floatMsg(t){
+    const d = document.createElement('div'); d.className = 'float'; d.textContent = t;
+    document.body.appendChild(d); setTimeout(() => d.remove(), 1800);
+  }
+
+  // Évènements du moteur : actualités, bulles, points ADN
+  function gameEvents(m){
+    for (const ev of m.events || []) {
+      if (ev.k === 'pays') {
+        if (ev.big) { pushNews(ev.text); spawnBubble(ev.lon, ev.lat, 2); }
+      } else {
+        pushNews(ev.text);
+        if (ev.k === 'oms' || ev.k === 'vaccin' || ev.k === 'chaos') toast(ev.text);
+      }
+    }
+    if (game.mode === 'campagne' && epi.running) {
+      for (const [key, v, lbl] of [['c', m.totals.cases, 'cas'], ['d', m.totals.D, 'morts']]) {
+        for (let t = 100; t <= 1e10; t *= 10) if (v >= t && !game.marks.has(key + t)) { game.marks.add(key + t); addDNA(2, `${fmtN.format(t)} ${lbl}`); }
+      }
+      if (m.day - game.lastTrickle >= 6) { game.lastTrickle = m.day; addDNA(1); }
+      // bulle aléatoire sur un foyer actif
+      if (Math.random() < 0.05 && m.hot && m.hot.length) { const h = m.hot[0]; spawnBubble(h[0], h[1], 1); }
+    }
+  }
+  function spawnBubble(lon, lat, val){
+    if (game.mode !== 'campagne') return;
+    const el = document.createElement('button'); el.className = 'bubble'; el.textContent = '🧬';
+    const mk = new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(map);
+    el.onclick = e => { e.stopPropagation(); addDNA(val, 'bulle'); mk.remove(); };
+    setTimeout(() => mk.remove(), 12000);
+  }
+  // Bandeau d'actualité façon chaîne d'info
+  function pushNews(t){
+    game.news.unshift({ t, d: Math.floor(epi.day) });
+    game.news = game.news.slice(0, 12);
+    const txt = game.news.map(n => `<span><b>J${n.d}</b> ${n.t}</span>`).join('<i>•</i>');
+    $('tickerText').innerHTML = txt + '<i>•</i>' + txt;
+    $('ticker').classList.add('show');
+    $('tickerText').style.animationDuration = Math.max(20, game.news.length * 7) + 's';
+  }
+
+  // Fiche pays au toucher
+  map.on('click', e => {
+    if (placing || !epi.ready || map.getZoom() > 11) return;
+    epi.worker.postMessage({ type: 'cellQuery', id: 'card', lat: e.lngLat.lat, lon: e.lngLat.lng });
+  });
+  const LEVEL_TXT = ['Aucune mesure', 'Surveillance renforcée', 'Masques et gestes barrières', 'Écoles et frontières fermées', 'Confinement général'];
+  let cardCountry = -1;
+  function showCountry(k){
+    if (k < 0 || !COUNTRIES[k]) return;
+    cardCountry = k; const c = COUNTRIES[k], s = epi.countries;
+    const inf = s ? s[k * 6] : 0, dead = s ? s[k * 6 + 1] : 0, cases = s ? s[k * 6 + 2] : 0, lvl = s ? s[k * 6 + 3] : 0, col = s ? s[k * 6 + 5] : 0;
+    $('cardName').textContent = c[1];
+    $('cardBody').innerHTML = `
+      <div class="cg"><span>Population</span><b>${fmtN.format(c[5])}</b></div>
+      <div class="cg"><span>Malades</span><b style="color:#ff6a5c">${fmtN.format(Math.round(inf))}</b></div>
+      <div class="cg"><span>Morts</span><b>${fmtN.format(Math.round(dead))}</b></div>
+      <div class="cg"><span>Cas au total</span><b>${fmtN.format(Math.round(cases))}</b></div>
+      <div class="cg wide"><span>Richesse</span><b>${c[2] ? fmtFull.format(c[2]) + ' $ / hab.' : '—'}</b></div>
+      <div class="cg wide"><span>Mesures</span><b>${col ? 'État effondré' : LEVEL_TXT[lvl]}</b></div>`;
+    $('cardLevels').hidden = game.mode === 'campagne' || !epi.running;
+    $('cardLevels').querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.l === lvl));
+    $('card').classList.add('show');
+  }
+  $('cardClose').onclick = () => $('card').classList.remove('show');
+  $('cardLevels').querySelectorAll('button').forEach(b => b.onclick = () => {
+    if (cardCountry < 0) return;
+    epi.worker.postMessage({ type: 'country', c: cardCountry, level: +b.dataset.l, lock: true });
+    $('cardLevels').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  });
+
+  // Panneau d'évolution
+  let evoCat = 'transmission';
+  $('evoTabs').innerHTML = window.EVO_CATS.map(([id, l]) => `<button data-c="${id}" class="${id === evoCat ? 'on' : ''}">${l}</button>`).join('');
+  $('evoTabs').querySelectorAll('button').forEach(b => b.onclick = () => { evoCat = b.dataset.c; $('evoTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); drawEvo(); });
+  $('bEvo').onclick = () => { drawEvo(); $('evoPanel').classList.add('show'); };
+  $('evoClose').onclick = () => $('evoPanel').classList.remove('show');
+  function effectText(f){
+    const t = [];
+    if (f.r0) t.push(`contagiosité +${Math.round(f.r0 * 100)} %`);
+    if (f.lethal) t.push(`létalité +${pct(f.lethal)}`);
+    if (f.severity > 0) t.push('plus visible'); if (f.severity < 0) t.push('moins visible');
+    if (f.stealth) t.push('discret');
+    if (f.cureSlow) t.push('ralentit le vaccin');
+    if (f.cure) t.push(`vaccin ${f.cure} pts`);
+    if (f.modes) t.push([...f.modes].map(c => window.MODES[c].toLowerCase()).join(', '));
+    return t.join(' · ');
+  }
+  function drawEvo(){
+    drawDNA();
+    const e = game.evo || computeEvo(), b = game.base || currentPathogen();
+    const bar = (lbl, v, col) => `<div class="bar"><span>${lbl}</span><i><b style="width:${Math.round(Math.min(1, v) * 100)}%;background:${col}"></b></i></div>`;
+    $('evoStats').innerHTML = bar('Contagiosité', Math.log(1 + b.r0 * e.r0) / Math.log(21), '#ff9e1f') + bar('Gravité', Math.min(1, (b.ifr * 3 + e.severity / 6)), '#ffd84a')
+      + bar('Létalité', Math.sqrt(1 - (1 - b.ifr) * (1 - e.lethal)), '#ff3b30') + bar('Résistance au vaccin', e.cureSlow, '#9de69d');
+    const ok = id => game.owned.has(id);
+    $('evoGrid').innerHTML = window.EVOLUTION.filter(u => u[1] === evoCat).map(u => {
+      const owned = ok(u[0]), avail = u[4].every(ok), afford = game.mode !== 'campagne' || game.dna >= u[3];
+      const cls = owned ? 'own' : !avail ? 'lock' : afford ? 'buy' : 'poor';
+      return `<button class="evo ${cls}" data-id="${u[0]}"><b>${u[2]}</b><span class="cost">${owned ? '✓ acquis' : !avail ? '🔒 ' + u[4].map(r => window.EVOLUTION.find(x => x[0] === r)[2]).join(', ') : u[3] + ' 🧬'}</span><small>${u[6]}</small><em>${effectText(u[5])}</em></button>`;
+    }).join('');
+    $('evoGrid').querySelectorAll('.evo.buy').forEach(b => b.onclick = () => buy(b.dataset.id));
+  }
+  function buy(id){
+    const u = window.EVOLUTION.find(x => x[0] === id); if (!u || game.owned.has(id)) return;
+    if (game.mode === 'campagne') { if (game.dna < u[3]) return; game.dna -= u[3]; }
+    game.owned.add(id);
+    if (u[5].cure && epi.worker) epi.worker.postMessage({ type: 'cure', delta: u[5].cure });
+    applyEvo(); drawEvo();
+    pushNews(`Le pathogène a muté : ${u[2].toLowerCase()}`);
+  }
+
+  // Fin de partie
+  function showEnd(m){
+    setSpeed(0);
+    const win = m.result === 'victoire';
+    $('endTitle').textContent = win ? 'Victoire' : 'Défaite';
+    $('endTitle').className = win ? 'win' : 'lose';
+    const T = epi.totals || {};
+    $('endBody').innerHTML = `<p>${m.reason}</p><div class="endStats">
+      <div><span>Durée</span><b>${Math.floor(m.day)} jours</b></div>
+      <div><span>Cas</span><b>${fmtN.format(T.cases || 0)}</b></div>
+      <div><span>Morts</span><b>${fmtN.format(T.D || 0)}</b></div>
+      <div><span>Pays touchés</span><b>${epi.infCountries || 0}</b></div>
+      <div><span>Vaccin</span><b>${Math.round(epi.cure || 0)} %</b></div>
+      <div><span>Mutations</span><b>${game.owned.size}</b></div></div>`;
+    $('endModal').classList.add('show');
+  }
+  window.vecteur.showEnd = showEnd;
+  $('endClose').onclick = () => $('endModal').classList.remove('show');
+  $('endNew').onclick = () => { $('endModal').classList.remove('show'); $('epiNew').click(); openPanel(true); };
+
+  // Mode de jeu (onglet 3)
+  document.querySelectorAll('[name=mode]').forEach(r => r.onchange = () => { game.mode = r.value; drawModeOpts(); });
+  $('goalSel').onchange = e => game.goal = e.target.value;
+  function drawModeOpts(){
+    const P = currentPathogen();
+    if (P.release) { game.mode = 'bac'; document.querySelector('[name=mode][value=bac]').checked = true; }
+    document.querySelector('[name=mode][value=campagne]').disabled = !!P.release;
+    $('goalRow').hidden = game.mode !== 'campagne';
+    $('sbRow').hidden = game.mode === 'campagne';
+  }
+
   function drawStats(){
     const T = epi.totals; if (!T) return;
     $('runDay').textContent = 'Jour ' + Math.floor(epi.day);
+    $('cureBar').style.width = (epi.cure || 0).toFixed(1) + '%';
+    $('cureTxt').textContent = epi.cureDone ? 'Vaccin disponible — vaccination en cours' : epi.who ? `Recherche du vaccin : ${(epi.cure || 0).toFixed(1).replace('.', ',')} %` : 'Aucune recherche en cours';
+    $('worldLine').textContent = `${epi.infCountries || 0} pays touchés` + (epi.countries ? ` · ${(() => { let c = 0; for (let k = 0; k < epi.countries.length / 6; k++) if (epi.countries[k * 6 + 3] >= 4) c++; return c; })()} pays confinés` : '');
     $('stE').textContent = fmtN.format(Math.round(T.E));
     $('stI').textContent = fmtN.format(Math.round(T.I));
     $('stR').textContent = fmtN.format(Math.round(T.R));
