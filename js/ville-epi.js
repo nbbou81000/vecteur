@@ -60,6 +60,8 @@ window.createCityEpi = function(ctx){
     clouds: [], hospitals: [], counts: [0, 0, 0, 0, 0], newCases: 0, log: [],
     level: 0, essential: new Uint8Array(A), maskWear: new Uint8Array(A),
     shed: new Float32Array(A).fill(1), src: new Int32Array(A).fill(-1), by: new Int32Array(A).fill(-1),
+    // traçabilité pour la fiche d'identité : qui a contaminé qui, comment et quand
+    how: new Uint8Array(A).fill(255), tInf: new Float64Array(A),
     placeHits: new Map(), clusters: [], clusterSeen: new Set(), placeTotal: new Int32Array(NP),
     // politique sanitaire du pays (envoyée par le moteur mondial) et comportements individuels
     pol: null, adh: 0.85, det: 0, comply: new Float32Array(A), tele: new Float32Array(A), quar: new Float64Array(A), detected: new Uint8Array(A)
@@ -81,6 +83,10 @@ window.createCityEpi = function(ctx){
   const byHome = new Map();
   for (let i = 0; i < A; i++) if (E.age[i] >= 18) { const l = byHome.get(ag.home[i]) || []; l.push(i); byHome.set(ag.home[i], l); }
   for (const l of byHome.values()) for (let k = 0; k + 1 < l.length; k += 2) { E.partner[l[k]] = l[k + 1]; E.partner[l[k + 1]] = l[k]; }
+  // plusieurs maladies sur les mêmes habitants : âge, habitudes et comportements sont communs à toutes
+  const SHARED = ['age', 'hyg', 'social', 'transit', 'partner', 'comply', 'tele', 'essential', 'maskWear', 'mask'];
+  if (ag.shared) for (const k of SHARED) E[k] = ag.shared[k];
+  else { ag.shared = {}; for (const k of SHARED) ag.shared[k] = E[k]; }
   let ageNorm = 0; for (let i = 0; i < A; i++) ageNorm += Math.exp((E.age[i] - 50) / 13); ageNorm /= A;
 
   // ---- grilles du quartier (eau : 400 m ; vecteurs / animaux : 150 m)
@@ -100,8 +106,9 @@ window.createCityEpi = function(ctx){
 
   /* ---------- Initialisation depuis l'état mondial de la cellule ---------- */
   // Nouvelle contamination de l'habitant i (lieu p où elle a eu lieu, -1 si dans la rue)
-  function infect(i, now, p){
+  function infect(i, now, p, by, how){
     E.st[i] = 1; E.tEnd[i] = now + gammaRand(E.P.inc) * D; E.shed[i] = gammaK(E.P.k || 1); E.src[i] = p; E.newCases++;
+    E.by[i] = by == null ? -1 : by; E.how[i] = how == null ? 255 : how; E.tInf[i] = now;
     if (p >= 0) noteCluster(p, now);
   }
   // Cluster : au moins 5 contaminations au même endroit en 3 jours (hors simple foyer familial)
@@ -135,6 +142,7 @@ window.createCityEpi = function(ctx){
       if (f) { const w = wgt ? wgt[i] : 1, u = Math.random(); s = u < f.d * w ? 4 : u < (f.d + f.r) * w ? 3 : u < (f.d + f.r + f.i) * w ? 2 : u < (f.d + f.r + f.i + f.e) * w ? 1 : 0; }
       if (s === 1 || s === 2) E.shed[i] = gammaK(E.P.k || 1);
       E.st[i] = s; E.dose[i] = 0;
+      if (s) { E.how[i] = 14; E.by[i] = -1; E.tInf[i] = now - Math.random() * (E.P.inc + E.P.inf) * D; }
       if (s === 1) E.tEnd[i] = now + Math.random() * E.P.inc * D;
       if (s === 2) { E.tEnd[i] = now + Math.random() * E.P.inf * D; E.symp[i] = Math.random() > E.P.asymp ? 1 : 0; decideIso(i); }
     }
@@ -195,8 +203,8 @@ window.createCityEpi = function(ctx){
     if (releaseKind) return i;   // agents chimiques / environnementaux : pas de malade initial
     // contamination initiale : le patient zéro et les plus proches
     const now = ctx.now();
-    const infect = k => { E.st[k] = 2; E.tEnd[k] = now + gammaRand(E.P.inf) * D; E.symp[k] = Math.random() > E.P.asymp ? 1 : 0; E.shed[k] = gammaK(E.P.k || 1); decideIso(k); };
-    infect(i);
+    const infect = k => { E.st[k] = 2; E.tEnd[k] = now + gammaRand(E.P.inf) * D; E.symp[k] = Math.random() > E.P.asymp ? 1 : 0; E.shed[k] = gammaK(E.P.k || 1); decideIso(k); E.how[k] = 15; E.by[k] = -1; E.tInf[k] = now; };
+    infect(i); E.how[i] = 17;
     // le profil du patient zéro règle sa propre contagiosité (un « super-propagateur » l'est vraiment)
     if (prof) E.shed[i] = Math.max(0.3, prof.contacts / 12);
     count = Math.max(1, Math.round(count / Math.max(1, ratio)));   // un habitant simulé représente « ratio » personnes
@@ -325,6 +333,9 @@ window.createCityEpi = function(ctx){
 
   /* ---------- Un pas de contagion ---------- */
   const STREET = 4, streetMap = new Map(), transitMap = new Map();
+  const placeWho = new Map(), streetWho = new Map(), transitWho = new Map(), cmp = new Float64Array(13);
+  const pushTo = (M, k, i) => { const a = M.get(k); if (a) a.push(i); else M.set(k, [i]); };
+  const pick = a => a && a.length ? a[Math.floor(Math.random() * a.length)] : -1;
   E.tick = function(){
     if (!E.running || !E.P) return;
     const now = ctx.now();
@@ -337,7 +348,7 @@ window.createCityEpi = function(ctx){
     const hour = ctx.localHour();
     const placeN = E.placeN, placeInf = E.placeInf, placeCont = E.placeCont;
     placeN.fill(0); placeInf.fill(0);
-    streetMap.clear(); transitMap.clear();
+    streetMap.clear(); transitMap.clear(); placeWho.clear(); streetWho.clear(); transitWho.clear();
     let inW = new Float32Array(water.length), inV = new Float32Array(vec.length);
     const hostW = new Float32Array(water.length), hostV = new Float32Array(vec.length);
     // 1. Qui est où, qui contamine
@@ -351,10 +362,11 @@ window.createCityEpi = function(ctx){
       if (T) {
         if (T.car) continue;
         const k = Math.floor(ag.x[i] / STREET) + ',' + Math.floor(ag.y[i] / STREET);
-        if (inf > 0) streetMap.set(k, (streetMap.get(k) || 0) + inf);
-        if (E.transit[i]) { const tk = Math.floor(ag.x[i] / 60) + ',' + Math.floor(ag.y[i] / 60); const o = transitMap.get(tk) || [0, 0]; o[0] += inf; o[1]++; transitMap.set(tk, o); }
+        if (inf > 0) { streetMap.set(k, (streetMap.get(k) || 0) + inf); pushTo(streetWho, k, i); }
+        if (E.transit[i]) { const tk = Math.floor(ag.x[i] / 60) + ',' + Math.floor(ag.y[i] / 60); const o = transitMap.get(tk) || [0, 0]; o[0] += inf; o[1]++; transitMap.set(tk, o); if (inf > 0) pushTo(transitWho, tk, i); }
       } else {
         const p = ag.loc[i]; placeN[p] += 1; placeInf[p] += inf;
+        if (inf > 0) pushTo(placeWho, p, i);
       }
       if (inf > 0) {
         if (m.O) inW[gW(ag.x[i], ag.y[i])] += inf;
@@ -403,38 +415,44 @@ window.createCityEpi = function(ctx){
       const pol = E.pol, away = T || ag.loc[i] !== ag.home[i];
       const hyg = 1 - 0.7 * Math.min(1, E.hyg[i] + (pol && pol.distancing ? 0.15 : 0)), maskF = away && wearsMask(i, !T) ? 0.5 : 1;
       const soc = E.social[i] * (pol && pol.distancing && away && obeys(i) ? 0.8 : 1);
-      let lam = 0, dose = 0;
+      let dose = 0, q = -1, sk = null, tk = null;
+      cmp.fill(0);
       if (!T) {
         const p = ag.loc[i], n = placeN[p], inf = placeInf[p] - (isInfectious(i) ? 1 : 0);
         if (inf > 0 && P.h2h) {
           const w = placeWeight(p, n);
-          lam += betaPlace * w * inf * (m.R + m.C * (n < 8 ? 1.5 : 0.3)) * maskF * soc;
-          lam += betaPlace * m.A * inf * 6 / (n + 5) * maskF;                      // aérosols : tout l'air du lieu
+          cmp[0] = betaPlace * w * inf * (m.R + m.C * (n < 8 ? 1.5 : 0.3)) * maskF * soc;   // gouttelettes, contacts
+          cmp[1] = betaPlace * m.A * inf * 6 / (n + 5) * maskF;                              // aérosols : tout l'air du lieu
         }
-        if (m.F || m.N) lam += betaPlace * 0.08 * placeCont[p] * hyg * (m.F + (E.placeKind[p] === 'repas' || p === E.foodPlace ? m.N * 2 : 0));
-        if (m.S) { const q = E.partner[i]; if (q >= 0 && isInfectious(q) && !ag.trip[q] && ag.loc[q] === ag.loc[i] && (hour > 21 || hour < 7)) lam += betaPlace * m.S * 4; }
-        if (m.B && E.placeKind[p] === 'hopital' && inf > 0) lam += betaPlace * m.B * inf * 0.3;
-        if (m.L && ag.loc[i] === ag.home[i] && inf > 0) lam += betaPlace * m.L * inf * 3;
+        if (m.F) cmp[2] = betaPlace * 0.08 * placeCont[p] * hyg * m.F;                       // surfaces
+        if (m.N && (E.placeKind[p] === 'repas' || p === E.foodPlace)) cmp[3] = betaPlace * 0.08 * placeCont[p] * hyg * m.N * 2;   // aliments
+        if (m.S) { q = E.partner[i]; if (q >= 0 && isInfectious(q) && !ag.trip[q] && ag.loc[q] === ag.loc[i] && (hour > 21 || hour < 7)) cmp[4] = betaPlace * m.S * 4; }
+        if (m.B && E.placeKind[p] === 'hopital' && inf > 0) cmp[5] = betaPlace * m.B * inf * 0.3;
+        if (m.L && ag.loc[i] === ag.home[i] && inf > 0) cmp[6] = betaPlace * m.L * inf * 3;
       } else if (!T.car) {
-        const k = Math.floor(ag.x[i] / STREET) + ',' + Math.floor(ag.y[i] / STREET);
-        const si = streetMap.get(k); if (si && P.h2h) lam += betaPlace * (m.R + m.A) * si * 3 * maskF;
-        if (E.transit[i]) { const o = transitMap.get(Math.floor(ag.x[i] / 60) + ',' + Math.floor(ag.y[i] / 60)); if (o && o[0] > 0 && P.h2h) lam += betaPlace * (m.R + m.A) * o[0] * 8 / (o[1] + 4) * maskF * (1 - 0.6 * (pol ? pol.transit : 0)); }
+        sk = Math.floor(ag.x[i] / STREET) + ',' + Math.floor(ag.y[i] / STREET);
+        const si = streetMap.get(sk); if (si && P.h2h) cmp[7] = betaPlace * (m.R + m.A) * si * 3 * maskF;
+        if (E.transit[i]) { tk = Math.floor(ag.x[i] / 60) + ',' + Math.floor(ag.y[i] / 60); const o = transitMap.get(tk); if (o && o[0] > 0 && P.h2h) cmp[8] = betaPlace * (m.R + m.A) * o[0] * 8 / (o[1] + 4) * maskF * (1 - 0.6 * (pol ? pol.transit : 0)); }
       }
-      if (m.O) { const g = gW(ag.x[i], ag.y[i]); lam += betaWater * water[g] / Math.max(1, hostW[g]) * hyg * m.O; }
-      if (m.V) { const g = gV(ag.x[i], ag.y[i]); lam += betaVec * vec[g] / Math.max(1, hostV[g]) * clim * biting * m.V; }
-      if (m.Z) lam += 0.02 * reservoir[gV(ag.x[i], ag.y[i])] * m.Z;
-      if (E.clouds.length && (m.E || m.K)) { const c = cloudConc(ag.x[i], ag.y[i], now, !T) * (E.mask[i] ? 0.6 : 1); dose = c; lam += c * 25 * Math.max(m.E, m.K); }
+      if (m.O) { const g = gW(ag.x[i], ag.y[i]); cmp[9] = betaWater * water[g] / Math.max(1, hostW[g]) * hyg * m.O; }
+      if (m.V) { const g = gV(ag.x[i], ag.y[i]); cmp[10] = betaVec * vec[g] / Math.max(1, hostV[g]) * clim * biting * m.V; }
+      if (m.Z) cmp[11] = 0.02 * reservoir[gV(ag.x[i], ag.y[i])] * m.Z;
+      if (E.clouds.length && (m.E || m.K)) { const c = cloudConc(ag.x[i], ag.y[i], now, !T) * (E.mask[i] ? 0.6 : 1); dose = c; cmp[12] = c * 25 * Math.max(m.E, m.K); }
+      let lam = 0; for (let c = 0; c < 13; c++) lam += cmp[c];
       if (lam <= 0) continue;
       if (Math.random() < 1 - Math.exp(-lam * dtH)) {
         E.dose[i] += dose * dtH;
-        if (P.cat === 'chimique' || P.cat === 'toxine') { E.st[i] = 2; E.tEnd[i] = now + gammaRand(Math.max(P.inc, 0.02)) * D; E.symp[i] = 1; E.sev[i] = 1; E.newCases++; }
-        else infect(i, now, T ? -1 : ag.loc[i]);
+        // comment ? (tirage selon la part de chaque voie) et par qui ?
+        let u = Math.random() * lam, how = 0; while (how < 12 && u >= cmp[how]) { u -= cmp[how]; how++; }
+        const by = how === 4 ? q : how === 7 ? pick(streetWho.get(sk)) : how === 8 ? pick(transitWho.get(tk)) : (how <= 1 || how === 5 || how === 6) && !T ? pick(placeWho.get(ag.loc[i])) : -1;
+        if (P.cat === 'chimique' || P.cat === 'toxine') { E.st[i] = 2; E.tEnd[i] = now + gammaRand(Math.max(P.inc, 0.02)) * D; E.symp[i] = 1; E.sev[i] = 1; E.newCases++; E.how[i] = how; E.by[i] = -1; E.tInf[i] = now; E.src[i] = T ? -1 : ag.loc[i]; }
+        else infect(i, now, T ? -1 : ag.loc[i], by === i ? -1 : by, how);
       }
     }
     // Partenaires occasionnels du patient zéro
     if (m.S && E.p0 >= 0 && isInfectious(E.p0) && E.p0prof && E.p0prof.partenaires > 1 && Math.random() < E.p0prof.partenaires / 7 * dtH / 24) {
       const k = Math.floor(Math.random() * A);
-      if (E.st[k] === 0 && Math.random() < 0.3) infect(k, now, -1);
+      if (E.st[k] === 0 && Math.random() < 0.3) infect(k, now, -1, E.p0, 4);
     }
     // 5. Évolution de chaque malade
     for (let i = 0; i < A; i++) {
@@ -477,8 +495,16 @@ window.createCityEpi = function(ctx){
     }
     for (let q = 0; q < Math.min(k, 30); q++) {
       const i = cand.length ? cand[Math.floor(Math.random() * cand.length)] : Math.floor(Math.random() * A);
-      if (E.st[i] === 0) infect(i, now, -1);
+      if (E.st[i] === 0) infect(i, now, -1, -1, 13);
     }
+  };
+  // Bac à sable : contaminer une personne précise (depuis sa fiche)
+  E.infectPerson = function(i){
+    if (!E.running || !E.P || E.st[i] !== 0) return false;
+    const now = ctx.now();
+    E.st[i] = 2; E.tEnd[i] = now + gammaRand(Math.max(E.P.inf, 0.05)) * D; E.symp[i] = Math.random() > E.P.asymp ? 1 : 0; E.shed[i] = gammaK(E.P.k || 1); decideIso(i);
+    E.how[i] = 16; E.by[i] = -1; E.tInf[i] = now; E.newCases++;
+    return true;
   };
   E.hlState = i => E.st[i];
   // ---- Passage de relais quand la caméra quitte le quartier : nuages et patient zéro

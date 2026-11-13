@@ -148,6 +148,16 @@
   #bFollow.on{background:rgba(255,80,60,.18);color:#ff9d92}
   #cityLine{font-size:12px;color:var(--muted);margin-top:6px}
   .zero.dead{background:#333;animation:none}
+  .zero.extra{width:16px;height:16px;background:var(--c);animation:none;opacity:.85}
+  #extraBox{margin-top:10px}
+  .exr{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+  .exr i{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
+  .exr span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .exr b{font-weight:500;color:var(--muted);font-size:12px;white-space:nowrap}
+  .exr button{background:none;border:0;color:var(--muted);font-size:14px;cursor:pointer;padding:2px 4px}
+  .exAddRow{display:flex;gap:8px;margin-top:8px}
+  .exAddRow select{flex:1;min-width:0;background:rgba(255,255,255,.06);color:inherit;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px}
+  .exAddRow .cta{width:auto;margin:0;padding:8px 14px}
   .crisisBox{width:min(1100px,100%)}
   .scope{margin-left:auto;margin-right:10px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;padding:7px;color:var(--text);font:500 13px Inter,sans-serif;max-width:46%}
   .scope option{background:#161a20}
@@ -222,6 +232,21 @@
   @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   #card{position:fixed;left:14px;top:calc(162px + var(--safe-t));width:300px;z-index:7;padding:12px 14px;display:none}
   #card.show{display:block}
+  #pcard{position:fixed;left:14px;top:calc(162px + var(--safe-t));width:340px;max-height:calc(100vh - 190px - var(--safe-t));overflow:auto;z-index:8;padding:12px 14px;display:none;font-size:13px}
+  #pcard.show{display:block}
+  #pcard a{color:#9fd8ff;text-decoration:none}
+  .pid{display:flex;gap:12px;align-items:center;margin:4px 0 10px}
+  .pid b{display:block;font-size:14px}.pid span{color:var(--muted)}
+  .pav{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#111;flex:none}
+  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+  .pgrid div span{display:block;font-size:11px;color:var(--muted)}.pgrid div b{font-weight:500}
+  .pl{color:#d7dce4;line-height:1.45;margin:2px 0 6px}
+  .ph{display:flex;align-items:center;gap:8px;margin-top:6px}.ph i{width:9px;height:9px;border-radius:50%}.ph span{margin-left:auto;font-weight:600}
+  .plist{display:flex;flex-direction:column;gap:3px}.plist span{color:var(--muted);font-size:12px}
+  .sd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+  .phist{list-style:none;padding:0;margin:0}.phist li{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05)}.phist li span{color:var(--muted);font-size:11px;float:right}
+  .pcsel{width:100%;margin-top:6px;background:rgba(255,255,255,.06);color:inherit;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px}
+  .pmark{width:26px;height:26px;border-radius:50%;border:2px solid #ffd166;box-shadow:0 0 12px #ffd166;pointer-events:none}
   .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .cg{background:rgba(255,255,255,.04);border-radius:8px;padding:6px 9px}.cg.wide{grid-column:1/3}
   .cg span{display:block;font-size:10.5px;color:var(--muted)}.cg b{font-size:14px}
@@ -292,6 +317,7 @@
     #settings{left:8px;right:8px;width:auto;bottom:calc(150px + var(--safe-b))}
     #ticker{right:14px;top:calc(156px + var(--safe-t));height:28px}
     #card{left:8px;right:8px;width:auto;top:calc(192px + var(--safe-t))}
+    #pcard{left:8px;right:8px;width:auto;top:auto;bottom:calc(84px + env(safe-area-inset-bottom, 0px));max-height:58vh}
     #evoStats{grid-template-columns:1fr}
     #evoGrid{grid-template-columns:1fr 1fr}
     .evo small{display:none}
@@ -441,6 +467,12 @@
     <div class="row2 statsBtn"><button id="bStats" class="cta sec">📊 Statistiques</button><button id="bSave" class="cta sec">💾 Sauvegarder</button></div>
     <div id="cityLine"></div>
     <div id="clusterList"></div>
+    <div id="extraBox" hidden>
+      <div class="lbl">Maladies en circulation</div>
+      <div id="extraList"></div>
+      <div class="exAddRow"><select id="exSel" aria-label="Maladie à ajouter"></select><button id="exAdd" class="cta sec">＋ Ajouter</button></div>
+      <div class="note">Jusqu’à 4 maladies en même temps, chacune avec sa couleur. Touchez ensuite la carte pour choisir où elle démarre.</div>
+    </div>
     <div id="lastEvent"></div>
     <div class="row2"><button id="bFollow" class="cta sec">◎ Suivre le patient zéro</button><button id="epiNew" class="cta sec">Nouvelle épidémie</button></div>
   </div>
@@ -455,6 +487,7 @@
 <div id="ticker"><b class="live">EN DIRECT</b><div class="tk"><div id="tickerText"></div></div></div>
 <div id="card" class="glass"><div class="epiHead"><b id="cardName"></b><button id="cardClose" aria-label="Fermer">×</button></div><div id="cardBody" class="cgrid"></div>
   <div id="cardLevels" hidden><div class="lbl">Imposer des mesures</div><div class="lvls"><button data-l="0">Aucune</button><button data-l="1">Surveillance</button><button data-l="2">Masques</button><button data-l="3">Fermetures</button><button data-l="4">Confinement</button></div></div></div>
+<div id="pcard" class="glass"><div class="epiHead"><b id="pcName"></b><button id="pcClose" aria-label="Fermer">×</button></div><div id="pcBody"></div></div>
 <div id="evoPanel"><div class="evoBox glass">
   <div class="epiHead"><b>Évolution</b><span id="evoDna" class="dnaBig"></span><button id="evoClose" aria-label="Fermer">×</button></div>
   <div id="evoStats"></div>
@@ -720,7 +753,7 @@
     canvasContextAttributes: { antialias: !MOBILE },
     fadeDuration: MOBILE ? 150 : 300
   });
-  window.vecteur = { map, get clock(){ return clock; }, get city(){ return city; } };
+  window.vecteur = { map, get clock(){ return clock; }, get city(){ return city; }, get extras(){ return extras; }, get epi(){ return epi; } };
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
   const $ = id => document.getElementById(id);
@@ -748,6 +781,9 @@
     try { map.addLayer(nightLayer, 'boundary-state'); } catch (e) { console.warn('nuit', e); }
     try {
       map.addSource('nuages', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addSource('trajets', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({ id: 'trajets', type: 'line', source: 'trajets', layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': ['get', 'col'], 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 2, 18, 5], 'line-opacity': ['get', 'o'] } }, 'label-road');
       map.addLayer({ id: 'nuages', type: 'fill', source: 'nuages', paint: { 'fill-color': ['get', 'col'], 'fill-opacity': ['get', 'o'] } }, 'label-road');
       map.addLayer(popLayer, 'label-road'); map.addLayer(cityLayer, 'label-road'); map.addLayer(flightLayer);
     } catch (e) { console.warn('population', e); }
@@ -837,46 +873,52 @@
   const EPI_W = 1440, EPI_H = 720;
   // Seconde texture : centre du foyer dans la cellule (R, G) et rayon (B) → les malades se regroupent
   const CSTRIDE = 13;   // valeurs par pays envoyées par le moteur
-  const epiTex = { data: new Uint8Array(EPI_W * EPI_H * 4), data2: new Uint8Array(EPI_W * EPI_H * 4), r0: 0, r1: EPI_H, tex: null, tex2: null, on: 0, segs: [] };
+  // Une couche de texture par maladie (jusqu'à 4 en bac à sable) : couche 0 = maladie principale
+  const MAXDIS = 4;
+  const epiTex = { layers: [], tex: null, tex2: null, on: 0, n: 1 };
+  function layer(d){
+    if (!epiTex.layers[d]) epiTex.layers[d] = { data: new Uint8Array(EPI_W * EPI_H * 4), data2: new Uint8Array(EPI_W * EPI_H * 4), segs: [[0, EPI_H]] };
+    return epiTex.layers[d];
+  }
+  function clearLayer(d){ const L = layer(d); L.data.fill(0); L.data2.fill(0); L.segs = [[0, EPI_H]]; }
+  Object.defineProperty(epiTex, 'data', { get: () => layer(0).data });
+  Object.defineProperty(epiTex, 'data2', { get: () => layer(0).data2 });
   const perf = { points: 0, work: 0, bytes: 0, uploads: 0 };
   function bindEpiTex(gl, pr){
+    const T = gl.TEXTURE_2D_ARRAY;
     if (!epiTex.tex) {
-      epiTex.tex = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, epiTex.tex);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, EPI_W, EPI_H, 0, gl.RGBA, gl.UNSIGNED_BYTE, epiTex.data);
-      epiTex.tex2 = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, epiTex.tex2);
-      for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, EPI_W, EPI_H, 0, gl.RGBA, gl.UNSIGNED_BYTE, epiTex.data2);
-      epiTex.r0 = EPI_H; epiTex.r1 = 0;
-    }
-    // envoi à la carte graphique : seulement les lignes modifiées (segments), ou tout si demandé
-    if (epiTex.r1 > epiTex.r0) { epiTex.segs.push([epiTex.r0, epiTex.r1]); epiTex.r0 = EPI_H; epiTex.r1 = 0; }
-    if (epiTex.segs.length) {
-      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-      // segments fusionnés (évite d'envoyer deux fois la même ligne)
-      const segs = epiTex.segs.sort((a, b) => a[0] - b[0]), merged = [];
-      for (const sg of segs) { const l = merged[merged.length - 1]; if (l && sg[0] <= l[1]) l[1] = Math.max(l[1], sg[1]); else merged.push([sg[0], sg[1]]); }
-      for (const [t, d] of [[epiTex.tex, epiTex.data], [epiTex.tex2, epiTex.data2]]) {
-        gl.bindTexture(gl.TEXTURE_2D, t);
-        for (const [a, b] of merged) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, a, EPI_W, b - a, gl.RGBA, gl.UNSIGNED_BYTE, d.subarray(a * EPI_W * 4, b * EPI_W * 4));
+      for (const k of ['tex', 'tex2']) {
+        epiTex[k] = gl.createTexture();
+        gl.bindTexture(T, epiTex[k]);
+        for (const [a, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(T, a, v);
+        gl.texImage3D(T, 0, gl.RGBA, EPI_W, EPI_H, MAXDIS, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
       }
-      perf.uploads += merged.reduce((s, x) => s + x[1] - x[0], 0);
-      epiTex.segs = [];
+      for (let d = 0; d < MAXDIS; d++) layer(d).segs = [[0, EPI_H]];
     }
-    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, epiTex.tex2);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, epiTex.tex);
+    // envoi à la carte graphique : seulement les lignes modifiées de chaque couche
+    let pending = false;
+    for (const L of epiTex.layers) if (L && L.segs.length) pending = true;
+    if (pending) {
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      epiTex.layers.forEach((L, d) => {
+        if (!L || !L.segs.length) return;
+        const segs = L.segs.sort((a, b) => a[0] - b[0]), merged = [];
+        for (const sg of segs) { const l = merged[merged.length - 1]; if (l && sg[0] <= l[1]) l[1] = Math.max(l[1], sg[1]); else merged.push([sg[0], sg[1]]); }
+        for (const [t, data] of [[epiTex.tex, L.data], [epiTex.tex2, L.data2]]) {
+          gl.bindTexture(T, t);
+          for (const [a, b] of merged) gl.texSubImage3D(T, 0, 0, a, d, EPI_W, b - a, 1, gl.RGBA, gl.UNSIGNED_BYTE, data.subarray(a * EPI_W * 4, b * EPI_W * 4));
+        }
+        perf.uploads += merged.reduce((s, x) => s + x[1] - x[0], 0);
+        L.segs = [];
+      });
+    }
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(T, epiTex.tex2);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(T, epiTex.tex);
     gl.uniform1i(pr.u('u_state'), 0); gl.uniform1i(pr.u('u_focus'), 1);
     gl.uniform1f(pr.u('u_epi'), epiTex.on);
+    gl.uniform1i(pr.u('u_ndis'), Math.max(1, epiTex.n));
   }
   // État d'une personne (0 sain, 1 incubation, 2 malade, 3 guéri, 4 mort) selon sa cellule et un tirage fixe u
   const GLSL_STATE = `
@@ -993,20 +1035,23 @@
   // Partie commune aux deux couches de points : rendu d'un point lisible de jour comme de nuit
   const DOT_FS = `#version 300 es
     precision mediump float;
-    in float v_night; in float v_a; in float v_kind; in float v_state; out vec4 o;
+    in float v_night; in float v_a; in float v_kind; in float v_state; in float v_dis; out vec4 o;
+    // couleur de chaque maladie (malades) ; l'incubation en est une version plus claire
+    vec3 disCol(float d){ return d < 0.5 ? vec3(1.0, 0.13, 0.10) : d < 1.5 ? vec3(0.72, 0.32, 1.0) : d < 2.5 ? vec3(1.0, 0.3, 0.72) : vec3(0.65, 1.0, 0.2); }
+    vec3 incCol(float d){ return d < 0.5 ? vec3(1.0, 0.62, 0.12) : mix(disCol(d), vec3(1.0), 0.45); }
     void main(){
       vec2 c = gl_PointCoord * 2.0 - 1.0;
       float r = length(c);
       if (r > 1.0) discard;
-      if (v_kind < -0.5) { float h = exp(-r * r * 3.5) * v_a; vec3 hc = v_state > 1.5 ? vec3(1.0, 0.18, 0.08) : vec3(1.0, 0.55, 0.1); o = vec4(hc * h, h * 0.5); return; }
+      if (v_kind < -0.5) { float h = exp(-r * r * 3.5) * v_a; vec3 hc = v_state > 1.5 ? (v_dis < 0.5 ? vec3(1.0, 0.18, 0.08) : disCol(v_dis)) : (v_dis < 0.5 ? vec3(1.0, 0.55, 0.1) : incCol(v_dis)); o = vec4(hc * h, h * 0.5); return; }
       vec3 day = v_kind > 1.5 ? vec3(1.0, 0.82, 0.30) : vec3(0.45, 0.93, 1.0);
       vec3 night = vec3(1.0, 0.74, 0.40);
       vec3 core = mix(day, night, v_night);
       float glowK = v_night * 0.6;
       if (v_state > 3.5)      { core = vec3(0.16, 0.16, 0.18); glowK = 0.0; }          // mort
       else if (v_state > 2.5) { core = vec3(0.62, 0.90, 0.62); glowK *= 0.5; }         // guéri
-      else if (v_state > 1.5) { core = vec3(1.0, 0.13, 0.10); glowK = 1.0; }          // malade
-      else if (v_state > 0.5) { core = vec3(1.0, 0.62, 0.12); glowK = max(glowK, 0.3); } // en incubation
+      else if (v_state > 1.5) { core = disCol(v_dis); glowK = 1.0; }          // malade
+      else if (v_state > 0.5) { core = incCol(v_dis); glowK = max(glowK, 0.3); } // en incubation
       float coreA = 1.0 - smoothstep(0.42, 0.62, r);           // cœur net
       float ring = (1.0 - smoothstep(0.62, 1.0, r)) * (1.0 - v_night * 0.85) * (v_state > 3.5 ? 0.4 : 1.0); // contour sombre
       float glow = exp(-r * r * 3.0) * glowK;
@@ -1049,17 +1094,15 @@
         ${sd.define}
         in vec2 a_pos; in vec2 a_work; in vec2 a_cell; in vec2 a_frac; in vec4 a_nrm;
         uniform vec3 u_sun; uniform float u_utc; uniform float u_size; uniform float u_alpha; uniform float u_pass;
-        uniform mediump sampler2D u_state; uniform mediump sampler2D u_focus; uniform float u_epi;
-        out float v_night; out float v_a; out float v_kind; out float v_state;
+        uniform mediump sampler2DArray u_state; uniform mediump sampler2DArray u_focus; uniform float u_epi; uniform int u_ndis;
+        out float v_night; out float v_a; out float v_kind; out float v_state; out float v_dis;
         float hash(float n){ return fract(sin(n) * 43758.5453123); }
-        // état d'une personne selon sa cellule (pré-calculée) et un tirage fixe u
-        float epiStateC(vec2 cell, vec2 fr, float u){
-          if (u_epi < 0.5) return 0.0;
-          ivec2 c = ivec2(cell);
-          vec4 p = texelFetch(u_state, c, 0);
+        // état d'une personne pour la maladie k, selon sa cellule (pré-calculée) et un tirage fixe u
+        float stateK(ivec2 c, vec2 fr, float u, int k){
+          vec4 p = texelFetch(u_state, ivec3(c, k), 0);
           if (p.r + p.g + p.b + p.a == 0.0) return 0.0;
           p = p * p;
-          vec4 f = texelFetch(u_focus, c, 0);
+          vec4 f = texelFetch(u_focus, ivec3(c, k), 0);
           if (f.a > 0.5) {
             float rad = f.b * 1.5;
             if (length(fr - f.rg) > rad) return 0.0;
@@ -1071,9 +1114,23 @@
           s += p.g; if (u < s) return 1.0;
           return 0.0;
         }
+        // plusieurs maladies : on garde l'état le plus visible (malade > incubation > mort > guéri)
+        float epiStateC(vec2 cell, vec2 fr, float id){
+          v_dis = 0.0;
+          if (u_epi < 0.5) return 0.0;
+          ivec2 c = ivec2(cell);
+          float best = 0.0, rank = 0.0;
+          for (int k = 0; k < 4; k++) {
+            if (k >= u_ndis) break;
+            float st = stateK(c, fr, hash(id * 0.9137 + 4.4 + float(k) * 1.618), k);
+            float rk = st == 2.0 ? 4.0 : st == 1.0 ? 3.0 : st == 4.0 ? 2.0 : st == 3.0 ? 1.0 : 0.0;
+            if (rk > rank) { rank = rk; best = st; v_dis = float(k); }
+          }
+          return best;
+        }
         void main(){
           float id = float(gl_VertexID);
-          v_state = epiStateC(a_cell, a_frac, hash(id * 0.9137 + 4.4));
+          v_state = epiStateC(a_cell, a_frac, id);
           // passes : d'abord les sains / guéris / morts, puis les malades et personnes en incubation par-dessus
           bool sick = v_state > 0.5 && v_state < 2.5;
           if (sick != (u_pass > 0.5)) { gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
@@ -1386,12 +1443,32 @@
       ag.hlng[i] = lng0 + hb.x / KX; ag.hlat[i] = lat0 + hb.y / KY;
     }
     // Contagion personne par personne (js/ville-epi.js)
-    const epiCity = window.createCityEpi({ ag, A, places, ratio, lng0, lat0, KX, KY, HALF,
-      now: () => clock.t, localHour: () => localHour(), climate: () => climateAt(lat0, clock.t, epi.p),
-      onSync: m => { if (epi.worker && epi.running) epi.worker.postMessage({ type: 'citySync', ...m }); } });
-    function refreshStates(){
-      for (let i = 0; i < A; i++) ag.state[i] = epiCity.st[i];
+    const mkEpi = X => window.createCityEpi({ ag, A, places, ratio, lng0, lat0, KX, KY, HALF,
+      now: () => clock.t, localHour: () => localHour(), climate: () => climateAt(lat0, clock.t, X.p),
+      onSync: m => { if (X.worker && X.running && !X.pending) X.worker.postMessage({ type: 'citySync', ...m }); } });   // pas avant que la maladie soit posée dans la rue
+    const epiCity = mkEpi(epi);
+    // maladies ajoutées : un moteur de rue chacune, sur les mêmes habitants
+    const extraCity = [];
+    function addExtra(X){
+      const e = mkEpi(X); extraCity[X.d] = e;
+      e.start(X.p, null);
+      const old = city && city !== cityObj && city.extra && city.extra[X.d];
+      if (old && old.running) e.importState(old.exportState(city.toLngLat), (lng, lat) => [(lng - lng0) * KX, (lat - lat0) * KY]);
+      X.worker.postMessage({ type: 'cellQuery', id: 'init', lat: lat0, lon: lng0 });
+      return e;
     }
+    // malade > incubation > mort > guéri : on montre l'état le plus marquant, avec la couleur de la maladie
+    const RANK = [0, 3, 4, 1, 2];
+    function refreshStates(){
+      if (!extras.length) { for (let i = 0; i < A; i++) ag.state[i] = epiCity.st[i]; return; }
+      const xs = extraCity.map((e, d) => e && [e.st, d]).filter(Boolean);
+      for (let i = 0; i < A; i++) {
+        let s = epiCity.st[i], best = RANK[s], dis = 0;
+        for (const [st, d] of xs) { const r = RANK[st[i]]; if (r > best) { best = r; s = st[i]; dis = d; } }
+        ag.state[i] = s + 10 * dis;
+      }
+    }
+    let cityObj = null;
     if (epi.running && epi.p) {
       epiCity.start(epi.p, null);
       if (city && city.epi && city.epi.running) epiCity.importState(city.epi.exportState(city.toLngLat), (lng, lat) => [(lng - lng0) * KX, (lat - lat0) * KY]);
@@ -1401,6 +1478,7 @@
     // Où doit se trouver l'habitant i à l'heure locale h ?
     function wanted(i, h){
       const o = epiCity.override(i, h); if (o >= 0) return o;          // morts, malades isolés ou hospitalisés, agenda du patient zéro
+      for (const e of extraCity) if (e && e.running) { const o2 = e.override(i, h); if (o2 >= 0) return o2; }
       return epiCity.restrict(i, plan(i, h));                           // mesures du pays (fermetures, confinement)
     }
     function plan(i, h){
@@ -1421,6 +1499,12 @@
     }
     const localHour = () => { const d = new Date(clock.t); return ((d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600 + lng0 / 15) % 24 + 24) % 24; };
     const h0 = localHour();
+    // Historique des déplacements de chacun (8 derniers trajets) pour la fiche d'identité
+    const HN = 8;
+    ag.hP = new Int32Array(A * HN).fill(-1); ag.hF = new Int32Array(A * HN).fill(-1); ag.hT = new Float64Array(A * HN); ag.hC = new Uint8Array(A * HN); ag.hH = new Uint8Array(A);
+    function logVisit(i, from, dest, t, car){
+      const k = i * HN + ag.hH[i]; ag.hP[k] = dest; ag.hF[k] = from; ag.hT[k] = t; ag.hC[k] = car ? 1 : 0; ag.hH[i] = (ag.hH[i] + 1) % HN;
+    }
     // Au départ, chacun est là où il était 1 h 30 plus tôt ; les trajets en cours seront
     // reconstitués (antidatés) dès les premières images.
     for (let i = 0; i < A; i++) { ag.loc[i] = wanted(i, (h0 - 1.5 + 24) % 24); if (ag.loc[i] !== wanted(i, h0) && sinceChange(i, h0) > 1.5) ag.loc[i] = wanted(i, h0); }
@@ -1454,6 +1538,12 @@
       return path.reverse();
     }
     function startTrip(i, dest, simMs, since){
+      const fromP = ag.loc[i];
+      startTrip0(i, dest, simMs, since);
+      const T = ag.trip[i];
+      logVisit(i, fromP, dest, T ? T.t0 : simMs - Math.max(0, since || 0) * 3600e3, T ? T.car : ag.car[i]);
+    }
+    function startTrip0(i, dest, simMs, since){
       const from = places[ag.loc[i]], toP = places[dest];
       let car = !!ag.car[i];
       // Déjà arrivé depuis longtemps ? Inutile de calculer l'itinéraire.
@@ -1486,7 +1576,7 @@
     let lastStates = 0;
     function update(){
       const simMs = clock.t, h = localHour();
-      if (clock.speed > 0) epiCity.tick();
+      if (clock.speed > 0) { epiCity.tick(); for (const e of extraCity) if (e && e.running) e.tick(); }
       if (performance.now() - lastStates > 400) {
         lastStates = performance.now(); refreshStates();
 
@@ -1524,9 +1614,24 @@
       }
     }
 
-    city = { ready: true, lng0, lat0, half: HALF, mx0, my0, WM, ag, agents: A, ratio, update, built: performance.now(), epi: epiCity, KX, KY,
+    cityObj = { ready: true, lng0, lat0, half: HALF, mx0, my0, WM, ag, agents: A, ratio, update, built: performance.now(), epi: epiCity, KX, KY,
+      extra: extraCity, addExtra: X => { addExtra(X); extraPending(X); }, places, HN,
+      // itinéraire entre deux lieux (pour dessiner l'historique d'une personne)
+      path: (a, b, car) => {
+        const pa = places[a], pb = places[b]; if (!pa || !pb) return null;
+        let pth = car ? route(pa.carNode, pb.carNode, true) : route(pa.node, pb.node, false);
+        if (!pth) pth = route(pa.node, pb.node, false);
+        const out = [[lng0 + pa.x / KX, lat0 + pa.y / KY]];
+        if (pth) for (const n of pth) out.push([lng0 + X[n] / KX, lat0 + Y[n] / KY]);
+        out.push([lng0 + pb.x / KX, lat0 + pb.y / KY]);
+        return out;
+      },
       toLngLat: (x, y) => [lng0 + x / KX, lat0 + y / KY], toXY: (lng, lat) => [(lng - lng0) * KX, (lat - lat0) * KY] };
+    for (const X of extras) if (X.running) addExtra(X);
+    city = cityObj;
+    if (epi.worker && epi.ready) epi.worker.postMessage({ type: 'cellQuery', id: 'cc', lat: lat0, lon: lng0 });
     applyPendingRelease();
+    for (const X of extras) extraPending(X);
     cityLayer.setCity(city);
     cityBuilding = false;
     console.info(`Ville générée : ${M} nœuds, ${B.length} bâtiments, ${P.length} lieux, ${A} habitants (1 pour ${ratio}) en ${Math.round(performance.now() - t0)} ms`);
@@ -1550,14 +1655,14 @@
         ${sd.define}
         in vec2 a_pos; in float a_kind; in float a_state;
         uniform vec3 u_sun; uniform float u_size; uniform float u_alpha;
-        out float v_night; out float v_a; out float v_kind; out float v_state;
+        out float v_night; out float v_a; out float v_kind; out float v_state; out float v_dis;
         ${GLSL_GEO}
         void main(){
           gl_Position = projectTile(a_pos);
           v_night = smoothstep(0.04, -0.12, dot(mercToNormal(a_pos), u_sun));
-          v_kind = a_kind; v_state = a_state;
-          v_a = u_alpha * (a_kind < 0.5 && a_state < 0.5 ? 0.6 : 1.0);
-          gl_PointSize = u_size * (a_kind > 1.5 ? 1.45 : a_kind > 0.5 ? 1.15 : 0.62) * (a_state > 1.5 && a_state < 2.5 ? 1.5 : a_state > 0.5 && a_state < 1.5 ? 1.2 : 1.0);
+          v_kind = a_kind; v_state = mod(a_state, 10.0); v_dis = floor(a_state / 10.0);
+          v_a = u_alpha * (a_kind < 0.5 && v_state < 0.5 ? 0.6 : 1.0);
+          gl_PointSize = u_size * (a_kind > 1.5 ? 1.45 : a_kind > 0.5 ? 1.15 : 0.62) * (v_state > 1.5 && v_state < 2.5 ? 1.5 : v_state > 0.5 && v_state < 1.5 ? 1.2 : 1.0);
         }`, DOT_FS);
       return p;
     },
@@ -1882,6 +1987,7 @@
       else if (m.type === 'cellInfo' && city && city.epi) {
         if (m.pol) city.epi.setPolicy(m.pol, m.adh, m.det);
         if (m.id === 'init') city.epi.initFrom(m);
+        if (m.id === 'cc' || m.id === 'init') { if (m.country >= 0 && COUNTRIES[m.country]) city.iso = COUNTRIES[m.country][0]; return; }
         else if (m.imports > 0) city.epi.importCases(m.imports);   // cas importés : voyageurs et cellules voisines
       }
       else if (m.type === 'error') { epi.running = false; epi.waiting = false; showSetup(); toast(m.message); }
@@ -1891,9 +1997,10 @@
           let off = 0;
           for (const [a, b] of m.segs) {
             const len = (b - a) * EPI_W * 4;
-            epiTex.data.set(m.rows.subarray(off, off + len), a * EPI_W * 4);
-            epiTex.data2.set(m.rows2.subarray(off, off + len), a * EPI_W * 4);
-            epiTex.segs.push([a, b]); off += len;
+            const L = layer(0);
+            L.data.set(m.rows.subarray(off, off + len), a * EPI_W * 4);
+            L.data2.set(m.rows2.subarray(off, off + len), a * EPI_W * 4);
+            L.segs.push([a, b]); off += len;
           }
         }
         perf.work = m.work || 0; perf.bytes += m.bytes || 0;
@@ -1927,7 +2034,107 @@
       lastPump = now;
       epi.waiting = true; epi.worker.postMessage({ type: 'advance', t: clock.t });
     }
+    for (const X of extras) if (X.running && !X.waiting && clock.speed > 0 && clock.t > X.simT + 60000 && (now - X.pump >= 250 || clock.speed <= 3600 || catching)) {
+      X.pump = now; X.waiting = true; X.worker.postMessage({ type: 'advance', t: clock.t });
+    }
   }
+  function workerPathogen(P){
+    return { name: P.name, k: P.k, asymp: P.asymp, beta: P.r0 / P.inf, sigma: 1 / Math.max(P.inc, 0.01), gamma: 1 / Math.max(P.inf, 0.02), ifr: P.ifr, h2h: P.h2h, vec: P.vec, vecMin: P.vecMin };
+  }
+  // Envoie un message à tous les moteurs mondiaux (maladie principale + maladies ajoutées)
+  function toWorkers(msg){ if (epi.worker) epi.worker.postMessage(msg); for (const X of extras) if (X.worker) X.worker.postMessage(msg); }
+
+  /* ============ Maladies supplémentaires (bac à sable) ============
+     Chaque maladie ajoutée a son propre moteur mondial (un « worker ») et son propre moteur de rue.
+     La maladie principale n'est pas touchée : si on n'en ajoute pas, rien ne change. */
+  const DIS_COL = ['#ff2a1f', '#b852ff', '#ff4db8', '#a6ff33'];
+  const extras = [];
+  function freeSlot(){ for (let d = 1; d < MAXDIS; d++) if (!extras.some(X => X.d === d)) return d; return -1; }
+  function updateLayers(){ epiTex.n = 1 + extras.reduce((m, X) => Math.max(m, X.d), 0); map.triggerRepaint(); }
+  function newExtra(d, P, place, lng, lat){
+    const X = { d, p: P, place, lng, lat, running: false, waiting: false, simT: clock.t, pump: 0, totals: null, day: 0, worker: null, ready: null, pending: null, mk: null };
+    X.ready = new Promise(res => {
+      X.worker = new Worker('js/epidemie.js');
+      X.worker.onmessage = ev => {
+        const m = ev.data;
+        if (m.type === 'ready') res();
+        else if (m.type === 'idle') X.waiting = false;
+        else if (m.type === 'saved' || m.type === 'loaded') { const k = m.type + ':' + m.id, f = workerWait.get(k); if (f) { workerWait.delete(k); f(m); } }
+        else if (m.type === 'error') { toast(m.message); removeExtra(X); }
+        else if (m.type === 'cellInfo' && m.id !== 'card') {
+          const e = city && city.extra && city.extra[d]; if (!e) return;
+          if (m.pol) e.setPolicy(m.pol, m.adh, m.det);
+          if (m.id === 'init') e.initFrom(m); else if (m.imports > 0) e.importCases(m.imports);
+        }
+        else if (m.type === 'state') {
+          X.waiting = false; X.simT = m.t; X.totals = m.totals; X.day = m.day;
+          if (m.rows && m.segs) {
+            const L = layer(d); let off = 0;
+            for (const [a, b] of m.segs) { const len = (b - a) * EPI_W * 4; L.data.set(m.rows.subarray(off, off + len), a * EPI_W * 4); L.data2.set(m.rows2.subarray(off, off + len), a * EPI_W * 4); L.segs.push([a, b]); off += len; }
+          }
+          perf.bytes += m.bytes || 0;
+          for (const f of m.flights) flightLayer.add(f);
+          if (X.running && m.totals.E + m.totals.I < 0.5 && m.day > 0.5) { X.running = false; X.over = true; }
+          map.triggerRepaint();
+        }
+      };
+      X.worker.postMessage({ type: 'init', base: new URL('.', location.href).href, peoplePerDot: WORLD_POP / (DOTS.length / 2) });
+    });
+    if (lng != null) {
+      const el = document.createElement('div'); el.className = 'zero extra'; el.style.setProperty('--c', DIS_COL[d]);
+      X.mk = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+    }
+    extras.push(X); updateLayers();
+    return X;
+  }
+  function removeExtra(X){
+    const i = extras.indexOf(X); if (i < 0) return;
+    extras.splice(i, 1);
+    if (X.worker) X.worker.terminate();
+    if (X.mk) X.mk.remove();
+    if (city && city.extra) city.extra[X.d] = null;
+    clearLayer(X.d); updateLayers(); renderExtras();
+  }
+  // Lancement d'une maladie ajoutée à l'endroit choisi
+  async function launchExtra(P, lng, lat, place){
+    const d = freeSlot(); if (d < 0) { toast('4 maladies au maximum en même temps'); return; }
+    const X = newExtra(d, P, place, lng, lat);
+    await X.ready;
+    clearLayer(d);
+    const count = P.release ? 0 : SEEDS[+$('sl-seed').value] || 1;   // même nombre de personnes infectées au départ que la maladie principale
+    X.worker.postMessage({ type: 'start', pathogen: workerPathogen(P), lat, lon: lng, count, t: clock.t, p0: P.release ? null : { boost: 1, trips: [] },
+      game: epi.startGame || { mode: 'bac', noResponse: false, noCure: false, research: 1 }, crisis: { ...crisisUI.crisis, research: 0, production: 0 } });
+    // mêmes consignes que la maladie principale
+    for (const [sc, pol] of Object.entries(crisisUI.pols)) X.worker.postMessage({ type: 'policy', scope: sc === 'monde' ? 'monde' : +sc, pol });
+    for (const [c, l] of Object.entries(crisisUI.locks)) X.worker.postMessage({ type: 'country', c: +c, level: l, lock: true });
+    X.simT = clock.t; X.running = true; X.waiting = true;
+    X.pending = { t0: clock.t, lng, lat, count, prof: JSON.parse(JSON.stringify(prof)), disp: { ...disp } };
+    if (city) city.addExtra(X);
+    epi.log.push(`${P.name} : ${P.release ? 'dispersion' : 'patient zéro'} à ${place}`); pushNews(`Nouvelle maladie : ${P.name} (${place.split(',')[0]})`);
+    sound.play('release'); shockwave(new maplibregl.LngLat(lng, lat));
+    renderExtras();
+  }
+  function extraPending(X){
+    const R = X.pending, e = city && city.extra && city.extra[X.d]; if (!R || !e) return;
+    if (clock.t - R.t0 > 0.5 * 86400e3) { X.pending = null; return; }   // trop tard : le moteur mondial a pris le relais
+    const [x, y] = city.toXY(R.lng, R.lat);
+    if (Math.abs(x) > city.half * 0.9 || Math.abs(y) > city.half * 0.9) return;
+    X.pending = null;
+    if (X.p.release) e.release(x, y, R.disp); else e.setPatientZero(R.prof, x, y, R.count || 1, false);
+  }
+  function endExtras(){ while (extras.length) removeExtra(extras[0]); }
+  // Liste dans le panneau de la partie
+  function renderExtras(){
+    const box = $('extraBox'); if (!box) return;
+    box.hidden = game.mode !== 'bac' || !epiTex.on;
+    if (box.hidden) return;
+    const T = epi.totals;
+    const row = (col, name, t, over, d) => `<div class="exr"><i style="background:${col}"></i><span>${name}</span><b>${t ? fmtN.format(Math.round(t.E + t.I)) + ' malades · ' + fmtN.format(Math.round(t.D)) + ' morts' : 'démarrage…'}${over ? ' · éteinte' : ''}</b>${d ? `<button data-rm="${d}" aria-label="Retirer">✕</button>` : ''}</div>`;
+    $('extraList').innerHTML = extras.length ? row(DIS_COL[0], epi.p ? epi.p.name : '', T, !epi.running, 0) + extras.map(X => row(DIS_COL[X.d], X.p.name, X.totals, X.over, X.d)).join('') : '';
+    $('extraList').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { const X = extras.find(x => x.d === +b.dataset.rm); if (X) removeExtra(X); });
+    $('exAdd').disabled = freeSlot() < 0;
+  }
+  setInterval(renderExtras, 1000);
 
   /* ============ Interface du panneau ============ */
   const CAT = window.CATALOGUE.map(makePathogen);
@@ -2136,11 +2343,11 @@
     epiTex.on = 1;
     const count = P.release ? 0 : SEEDS[+$('sl-seed').value];
     epi.worker.postMessage({ type: 'start',
-      pathogen: { name: P.name, k: P.k, asymp: P.asymp, beta: P.r0 / P.inf, sigma: 1 / Math.max(P.inc, 0.01), gamma: 1 / Math.max(P.inf, 0.02), ifr: P.ifr, h2h: P.h2h, vec: P.vec, vecMin: P.vecMin },
+      pathogen: workerPathogen(P),
       lat: zeroLngLat.lat, lon: zeroLngLat.lng, count, t: clock.t, p0: P.release ? null : profileToWorld(P),
-      game: { mode: game.mode, goal: game.goal, noResponse: !DEF && $('sbNoResp').checked, noCure: !DEF && $('sbNoCure').checked, research: DEF ? 1 : +$('sbResearch').value, maxDeaths: +$('defDeaths').value },
+      game: (epi.startGame = { mode: game.mode, goal: game.goal, noResponse: !DEF && $('sbNoResp').checked, noCure: !DEF && $('sbNoCure').checked, research: DEF ? 1 : +$('sbResearch').value, maxDeaths: +$('defDeaths').value }),
       crisis: { ...crisisUI.crisis, unlimited: !DEF && crisisUI.crisis.unlimited, budget: DEF ? +$('defBudget').value : 3000, research: 0, production: 0 } });
-    crisisUI.pols = {}; crisisUI.pol = null; crisisUI.scope = 'monde'; crisisUI.crisis.research = 0; crisisUI.crisis.production = 0;
+    crisisUI.pols = {}; crisisUI.locks = {}; crisisUI.pol = null; crisisUI.scope = 'monde'; crisisUI.crisis.research = 0; crisisUI.crisis.production = 0;
     if (DEF) crisisUI.crisis.unlimited = false;
     $('bCrisis').hidden = game.mode === 'campagne';
     $('dnaRow').hidden = !!P.release || game.mode !== 'campagne'; drawDNA();
@@ -2174,8 +2381,8 @@
     return true;
   }
   $('epiNew').onclick = () => {
-    epi.running = false; epi.worker.postMessage({ type: 'stop' });
-    epiTex.on = 0; epiTex.data.fill(0); epiTex.r0 = 0; epiTex.r1 = EPI_H;
+    epi.running = false; epi.worker.postMessage({ type: 'stop' }); endExtras();
+    epiTex.on = 0; for (let d = 0; d < epiTex.layers.length; d++) if (epiTex.layers[d]) clearLayer(d);
     if (zeroMarker) { zeroMarker.remove(); zeroMarker = null; }
     if (city) city.epi.stop();
     while (clusterMarkers.length) clusterMarkers.pop().remove();
@@ -2186,6 +2393,45 @@
     showSetup();
   };
   $('bFollow').onclick = () => { follow = !follow; $('bFollow').classList.toggle('on', follow); };
+
+  // ---- Ajouter une maladie (bac à sable)
+  $('exSel').innerHTML = window.CATEGORIES.filter(c => c[0] !== 'tout').map(([id, l]) =>
+    `<optgroup label="${l}">${CAT.filter(p => p.cat === id).map(p => `<option value="${p.id}">${p.name}</option>`).join('')}</optgroup>`).join('');
+  $('exSel').value = 'rougeole';
+  let exPlacing = null, exMarker = null, exLngLat = null, exPlace = '';
+  $('exAdd').onclick = () => {
+    if (freeSlot() < 0) { toast('4 maladies au maximum en même temps'); return; }
+    exPlacing = finalize({ ...CAT.find(p => p.id === $('exSel').value) }); exLngLat = null;
+    openPanel(false); $('place').classList.add('show');
+    $('placeText').textContent = `Touchez la carte pour placer : ${exPlacing.name}`;
+    $('placeOk').hidden = true;
+    spinOn = false; $('bSpin').classList.remove('on');
+  };
+  map.on('click', async e => {
+    if (!exPlacing) return;
+    exLngLat = e.lngLat; const d = freeSlot();
+    if (!exMarker) { const el = document.createElement('div'); el.className = 'zero extra'; exMarker = new maplibregl.Marker({ element: el }).setLngLat(e.lngLat).addTo(map); }
+    else exMarker.setLngLat(e.lngLat);
+    exMarker.getElement().style.setProperty('--c', DIS_COL[d] || '#fff');
+    $('placeOk').hidden = false; $('placeText').textContent = 'Recherche du lieu…';
+    exPlace = `${e.lngLat.lat.toFixed(2)}°, ${e.lngLat.lng.toFixed(2)}°`;
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=fr&lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`);
+      const a = (await r.json()).address || {};
+      exPlace = [a.suburb || a.neighbourhood, a.city || a.town || a.village || a.municipality || a.county || a.state, a.country].filter(Boolean).join(', ') || exPlace;
+    } catch (err) {}
+    if (exPlacing) $('placeText').textContent = `${exPlacing.name} : ${exPlace}`;
+  });
+  function exDone(){ exPlacing = null; if (exMarker) { exMarker.remove(); exMarker = null; } $('place').classList.remove('show'); openPanel(!MOBILE); }
+  { const ok = $('placeOk').onclick, cancel = $('placeCancel').onclick;
+    $('placeOk').onclick = () => {
+      if (!exPlacing) return ok();
+      if (!exLngLat) return;
+      const P = exPlacing, ll = exLngLat; exDone();
+      launchExtra(P, ll.lng, ll.lat, exPlace);
+    };
+    $('placeCancel').onclick = () => exPlacing ? exDone() : cancel();
+  }
 
   const clusterMarkers = [];
   // Suivi du patient zéro et dessin des nuages (4 fois par seconde)
@@ -2314,9 +2560,276 @@
 
   // Fiche pays au toucher
   map.on('click', e => {
-    if (placing || !epi.ready || map.getZoom() > 11) return;
+    if (placing || exPlacing || !epi.ready || map.getZoom() > 11) return;
     epi.worker.postMessage({ type: 'cellQuery', id: 'card', lat: e.lngLat.lat, lon: e.lngLat.lng });
   });
+  /* ============ Fiche d'identité d'un habitant (vue rue) ============
+     Chaque point simulé a une identité inventée mais stable (tirée de sa position et de son numéro) :
+     nom selon le pays, âge, métier, adresse réelle (rue de la carte), foyer, santé, contacts, trajets. */
+  const NAMES = {
+    fr: [['Lucas','Hugo','Louis','Gabriel','Arthur','Jules','Thomas','Nicolas','Antoine','Julien','Pierre','Mathieu','Karim','Mehdi'],
+         ['Emma','Léa','Chloé','Camille','Manon','Inès','Sarah','Julie','Claire','Marie','Lucie','Nathalie','Amina','Sophie'],
+         ['Martin','Bernard','Dubois','Thomas','Robert','Richard','Petit','Durand','Leroy','Moreau','Simon','Laurent','Lefebvre','Michel','Garcia','Roux','Fournier','Girard','Bonnet','Mercier','Benali','Nguyen']],
+    en: [['James','John','Michael','David','Daniel','Matthew','Ryan','Liam','Noah','Ethan','Jacob','Tyler','Marcus','Kevin'],
+         ['Emily','Olivia','Emma','Sophia','Ava','Jessica','Sarah','Ashley','Hannah','Grace','Chloe','Megan','Aaliyah','Rachel'],
+         ['Smith','Johnson','Williams','Brown','Jones','Miller','Davis','Wilson','Anderson','Taylor','Moore','Clark','Lewis','Walker','Hall','Young','King','Wright','Scott','Green','Patel','Nguyen']],
+    es: [['Santiago','Mateo','Sebastián','Diego','Alejandro','Daniel','Javier','Carlos','Miguel','Pablo','Andrés','Luis','José','Jorge'],
+         ['Sofía','Valentina','Isabella','Camila','Lucía','María','Paula','Daniela','Carmen','Laura','Ana','Elena','Gabriela','Martina'],
+         ['García','Rodríguez','Martínez','López','González','Hernández','Pérez','Sánchez','Ramírez','Torres','Flores','Rivera','Gómez','Díaz','Morales','Ortiz','Castro','Ruiz','Romero','Vargas']],
+    pt: [['João','Pedro','Lucas','Gabriel','Rafael','Miguel','Tiago','Bruno','Felipe','Gustavo','André','Rodrigo'],
+         ['Maria','Ana','Beatriz','Júlia','Mariana','Larissa','Camila','Inês','Fernanda','Letícia','Carolina','Rita'],
+         ['Silva','Santos','Oliveira','Souza','Pereira','Costa','Rodrigues','Almeida','Nascimento','Lima','Ferreira','Carvalho','Gomes','Ribeiro','Martins','Rocha']],
+    de: [['Lukas','Leon','Jonas','Felix','Maximilian','Paul','Tim','Jan','Stefan','Michael','Florian','Tobias'],
+         ['Anna','Lena','Laura','Lea','Hannah','Sophie','Julia','Katharina','Sandra','Sabine','Mia','Lisa'],
+         ['Müller','Schmidt','Schneider','Fischer','Weber','Meyer','Wagner','Becker','Schulz','Hoffmann','Koch','Richter','Klein','Wolf','Neumann','Yılmaz']],
+    it: [['Francesco','Alessandro','Lorenzo','Matteo','Andrea','Marco','Luca','Giuseppe','Davide','Simone','Riccardo','Giovanni'],
+         ['Giulia','Sofia','Aurora','Alice','Martina','Chiara','Francesca','Sara','Valentina','Elena','Federica','Giorgia'],
+         ['Rossi','Russo','Ferrari','Esposito','Bianchi','Romano','Colombo','Ricci','Marino','Greco','Bruno','Gallo','Conti','De Luca','Costa','Fontana']],
+    ar: [['Mohamed','Ahmed','Youssef','Omar','Ali','Hassan','Karim','Amine','Khalid','Hamza','Mustafa','Ibrahim'],
+         ['Fatima','Aïcha','Mariam','Salma','Nour','Yasmine','Leila','Khadija','Sara','Amina','Rania','Hiba'],
+         ['El Amrani','Benali','Haddad','Mansour','Khalil','Saleh','Nasser','Hamdi','Bouazza','Rahmani','Saïdi','Aziz','Farouk','Karam']],
+    afr: [['Moussa','Ibrahima','Mamadou','Abdoulaye','Seydou','Ousmane','Kofi','Kwame','Emeka','Chinedu','Jean-Paul','Didier'],
+          ['Aminata','Fatoumata','Mariama','Awa','Aïssatou','Adjoa','Ngozi','Chiamaka','Grâce','Esther','Mireille','Béatrice'],
+          ['Diallo','Traoré','Koné','Coulibaly','Diop','Ndiaye','Sow','Camara','Mensah','Okafor','Okeke','Mbeki','Kamara','Touré','Ouédraogo','Kabila']],
+    ru: [['Alexandre','Dmitri','Sergueï','Ivan','Mikhaïl','Andreï','Nikolaï','Pavel','Artem','Maxime','Oleg','Iouri'],
+         ['Anastasia','Maria','Daria','Elena','Olga','Natalia','Tatiana','Irina','Ekaterina','Svetlana','Anna','Ksenia'],
+         ['Ivanov','Smirnov','Kouznetsov','Popov','Vassiliev','Petrov','Sokolov','Mikhaïlov','Novikov','Fiodorov','Morozov','Volkov']],
+    cn: [['Wei','Hao','Jun','Lei','Yang','Jie','Tao','Ming','Chen','Bo','Peng','Xin'],
+         ['Fang','Jing','Li','Xiu','Ying','Mei','Na','Yan','Hui','Lan','Ting','Xia'],
+         ['Wang','Li','Zhang','Liu','Chen','Yang','Huang','Zhao','Wu','Zhou','Xu','Sun','Ma','Zhu','Hu','Guo']],
+    jp: [['Haruto','Sota','Yuto','Hiroshi','Takeshi','Kenji','Ren','Daiki','Shota','Kazuki','Yuki','Ryo'],
+         ['Yui','Hina','Sakura','Aoi','Yuna','Mei','Haruka','Naomi','Keiko','Yoko','Rina','Misaki'],
+         ['Sato','Suzuki','Takahashi','Tanaka','Watanabe','Ito','Yamamoto','Nakamura','Kobayashi','Kato','Yoshida','Yamada']],
+    kr: [['Min-jun','Seo-jun','Ji-ho','Hyun-woo','Do-yoon','Jae-won','Sung-min','Joon-ho'],
+         ['Seo-yeon','Ji-woo','Ha-eun','Min-ji','Soo-ah','Ye-jin','Hye-jin','Eun-ji'],
+         ['Kim','Lee','Park','Choi','Jung','Kang','Cho','Yoon','Jang','Lim']],
+    in: [['Aarav','Vihaan','Arjun','Rohan','Rahul','Amit','Sanjay','Vikram','Imran','Rajesh','Karan','Anil'],
+         ['Priya','Ananya','Diya','Kavya','Pooja','Neha','Sunita','Anjali','Fatima','Meera','Lakshmi','Riya'],
+         ['Sharma','Verma','Patel','Singh','Kumar','Gupta','Reddy','Iyer','Khan','Das','Nair','Joshi','Mehta','Chopra']],
+    tr: [['Mehmet','Mustafa','Ahmet','Ali','Emre','Burak','Can','Murat','Yusuf','Kerem'],
+         ['Zeynep','Elif','Ayşe','Fatma','Merve','Esra','Defne','Ebru','Selin','Hatice'],
+         ['Yılmaz','Kaya','Demir','Şahin','Çelik','Yıldız','Aydın','Öztürk','Arslan','Doğan']]
+  };
+  const REGION = {};
+  for (const [k, list] of Object.entries({
+    fr: 'FRA BEL CHE LUX MCO HTI', en: 'USA GBR AUS NZL CAN IRL JAM ZAF', pt: 'PRT BRA AGO MOZ', de: 'DEU AUT', it: 'ITA SMR',
+    es: 'ESP MEX ARG COL CHL PER VEN ECU BOL URY PRY CUB DOM GTM HND SLV NIC CRI PAN',
+    ar: 'MAR DZA TUN EGY SAU ARE IRQ SYR JOR LBN LBY YEM OMN QAT KWT BHR SDN MRT PSE',
+    afr: 'SEN CIV MLI CMR BFA NER GIN COD COG GAB BEN TGO NGA GHA KEN TZA UGA ETH RWA MDG TCD CAF ZMB ZWE',
+    ru: 'RUS UKR BLR KAZ', cn: 'CHN TWN HKG SGP', jp: 'JPN', kr: 'KOR', in: 'IND PAK BGD NPL LKA', tr: 'TUR AZE'
+  })) for (const c of list.split(' ')) REGION[c] = k;
+  // générateur pseudo-aléatoire stable (même personne → même identité)
+  function prng(seed){ let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const pickR = (R, a) => a[Math.floor(R() * a.length)];
+  // métiers « masculin/féminin »
+  const PLACE_JOB = {
+    hospital: ['Infirmier/Infirmière', 'Aide-soignant/Aide-soignante', 'Médecin', 'Brancardier/Brancardière'], clinic: ['Médecin', 'Infirmier/Infirmière'], doctors: ['Médecin généraliste', 'Secrétaire médical/Secrétaire médicale'],
+    school: ['Enseignant/Enseignante', 'Surveillant/Surveillante', 'Agent d’entretien/Agente d’entretien'], kindergarten: ['Auxiliaire de puériculture', 'Enseignant/Enseignante'], college: ['Professeur/Professeure'], university: ['Chercheur/Chercheuse', 'Maître de conférences'],
+    restaurant: ['Serveur/Serveuse', 'Cuisinier/Cuisinière', 'Plongeur/Plongeuse'], fast_food: ['Équipier/Équipière', 'Cuisinier/Cuisinière'], cafe: ['Barista', 'Serveur/Serveuse'], bar: ['Barman/Barmaid'], pub: ['Barman/Barmaid'], nightclub: ['Agent de sécurité/Agente de sécurité', 'DJ'],
+    supermarket: ['Caissier/Caissière', 'Employé de rayon/Employée de rayon'], marketplace: ['Commerçant/Commerçante'], mall: ['Vendeur/Vendeuse'], shop: ['Vendeur/Vendeuse'], bakery: ['Boulanger/Boulangère'], pharmacy: ['Pharmacien/Pharmacienne'],
+    railway: ['Agent de gare/Agente de gare', 'Conducteur de train/Conductrice de train'], bus: ['Chauffeur de bus/Chauffeuse de bus'], place_of_worship: ['Bénévole associatif/Bénévole associative'], fitness_centre: ['Coach sportif/Coach sportive'],
+    cinema: ['Projectionniste'], theatre: ['Technicien du spectacle/Technicienne du spectacle'], stadium: ['Agent d’accueil/Agente d’accueil']
+  };
+  const OFFICE = ['Comptable', 'Développeur/Développeuse', 'Commercial/Commerciale', 'Assistant de direction/Assistante de direction', 'Ingénieur/Ingénieure', 'Chef de projet/Cheffe de projet', 'Juriste',
+    'Électricien/Électricienne', 'Plombier/Plombière', 'Livreur/Livreuse', 'Agent immobilier/Agente immobilière', 'Graphiste', 'Ouvrier du bâtiment/Ouvrière du bâtiment', 'Fonctionnaire', 'Banquier/Banquière',
+    'Mécanicien/Mécanicienne', 'Journaliste', 'Agent de nettoyage/Agente de nettoyage', 'Infirmier libéral/Infirmière libérale', 'Artisan/Artisane'];
+  const gender = (s, f) => s.includes('/') ? s.split('/')[f ? 1 : 0] : s;
+  function placeLabel(p, work){
+    const P = city.places[p]; if (!P) return 'un lieu';
+    if (work && !P.cls && !P.name) return P.r > 14 ? 'des bureaux' : 'un local professionnel';
+    if (P.name) return P.name;
+    const k = { hospital: 'l’hôpital', clinic: 'une clinique', school: 'une école', kindergarten: 'une crèche', college: 'un lycée', university: 'l’université', restaurant: 'un restaurant', fast_food: 'un fast-food', cafe: 'un café', bar: 'un bar', pub: 'un pub', supermarket: 'un supermarché', marketplace: 'le marché', railway: 'la gare', bus_station: 'la gare routière', place_of_worship: 'un lieu de culte', fitness_centre: 'une salle de sport', cinema: 'un cinéma', pharmacy: 'une pharmacie', bakery: 'une boulangerie' }[P.cls] || (P.cls ? 'un commerce' : null);
+    return k || (P.r > 14 ? 'un immeuble' : 'une maison');
+  }
+  function identity(i){
+    const c = city, ag = c.ag, h = c.places[ag.home[i]];
+    const R = prng(Math.round(h.x * 7 + 1e5) * 92821 ^ Math.round(h.y * 13 + 1e5) * 68917 ^ i * 2654435761);
+    const reg = NAMES[REGION[c.iso] || 'en'] || NAMES.en;
+    const female = R() < 0.5;
+    const first = pickR(R, reg[female ? 1 : 0]);
+    // même nom de famille dans un foyer
+    const RH = prng(Math.round(h.x * 3 + 7e4) * 31337 ^ Math.round(h.y * 3 + 7e4) * 7331);
+    const last = pickR(RH, reg[2]);
+    const age = Math.round(c.epi.age[i]);
+    let job;
+    if (ag.type[i] === 1) job = age < 11 ? 'Écolier/Écolière' : age < 15 ? 'Collégien/Collégienne' : age < 18 ? 'Lycéen/Lycéenne' : 'Étudiant/Étudiante';
+    else if (ag.type[i] === 2) job = age < 6 ? 'Enfant (garde à domicile)' : age >= 62 ? 'Retraité/Retraitée' : pickR(R, ['Au foyer', 'Sans emploi', 'Télétravail', 'Indépendant/Indépendante (à domicile)', 'En arrêt maladie']);
+    else { const w = c.places[ag.work[i]]; job = pickR(R, PLACE_JOB[w.cls] || PLACE_JOB[w.cls2] || OFFICE); }
+    const asian = ['cn', 'jp', 'kr'].includes(REGION[c.iso]);
+    return { first, last, name: asian ? `${last} ${first}` : `${first} ${last}`, female, age, job: gender(job, female),
+      num: 1 + Math.floor(R() * (h.r > 14 ? 120 : 60)), seed: R };
+  }
+  // Rues réelles de la carte (calque des noms de rues) et numéros de maison quand ils existent
+  function streetOf(x, y){
+    const c = city;
+    if (!c.streets) {
+      c.streets = []; c.housenums = [];
+      let f = []; try { f = map.querySourceFeatures('omt', { sourceLayer: 'transportation_name' }); } catch (e) {}
+      for (const ft of f) {
+        const nm = ft.properties['name:fr'] || ft.properties.name; if (!nm) continue;
+        const g = ft.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+        for (const L of lines) c.streets.push({ nm, pts: L.map(([lng, lat]) => c.toXY(lng, lat)) });
+      }
+      let hn = []; try { hn = map.querySourceFeatures('omt', { sourceLayer: 'housenumber' }); } catch (e) {}
+      for (const ft of hn) if (ft.geometry.type === 'Point') c.housenums.push([...c.toXY(...ft.geometry.coordinates), ft.properties.housenumber]);
+    }
+    let best = null, bd = 120 * 120;
+    for (const s of c.streets) for (let k = 1; k < s.pts.length; k++) {
+      const [ax, ay] = s.pts[k - 1], [bx, by] = s.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)), d = (ax + t * dx - x) ** 2 + (ay + t * dy - y) ** 2;
+      if (d < bd) { bd = d; best = s.nm; }
+    }
+    let num = null, nd = 30 * 30;
+    for (const [hx, hy, n] of c.housenums) { const d = (hx - x) ** 2 + (hy - y) ** 2; if (d < nd) { nd = d; num = n; } }
+    return { street: best, num };
+  }
+  const HOW = ['en partageant le même lieu (gouttelettes, contact)', 'en respirant le même air (aérosols)', 'par une surface contaminée', 'par des aliments contaminés',
+    'par voie sexuelle', 'par le sang (soins)', 'par les poux du logement', 'en croisant quelqu’un dans la rue', 'dans les transports en commun', 'par l’eau du quartier',
+    'piqûre d’insecte (moustique, tique, puce)', 'par un animal (réservoir)', 'exposition au nuage toxique / de spores', 'cas importé (voyageur arrivé par la gare ou l’entrée du quartier)',
+    'déjà contaminé avant d’arriver dans le quartier', 'contaminé en même temps que le patient zéro', 'contaminé par vous (bac à sable)', 'patient zéro'];
+  const ST_TXT = ['Sain', 'En incubation', 'Malade', 'Guéri', 'Décédé'];
+  const ST_COL = ['#73edff', '#ff9e1f', '#ff2a1f', '#9de69d', '#888'];
+  const fmtHM = t => { const d = new Date(t + (city ? city.lng0 / 15 * 3600e3 : 0)); return String(d.getUTCHours()).padStart(2, '0') + 'h' + String(d.getUTCMinutes()).padStart(2, '0'); };
+  const ago = t => { const m = (clock.t - t) / 60000; return m < 1 ? 'à l’instant' : m < 60 ? `il y a ${Math.round(m)} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j`; };
+  const engines = () => { const out = []; if (city && city.epi && city.epi.running) out.push([0, city.epi, epi.p]); for (const X of extras) { const e = city && city.extra && city.extra[X.d]; if (e && e.running) out.push([X.d, e, X.p]); } return out; };
+  const person = { i: -1, mk: null, follow: false, addr: '' };
+  function pickAgent(e){
+    if (!city || !city.ready || map.getZoom() < 12.5) return -1;
+    const ag = city.ag, [cx, cy] = city.toXY(e.lngLat.lng, e.lngLat.lat);
+    // rayon de recherche : ~16 pixels à l'écran
+    const p2 = map.unproject([e.point.x + 16, e.point.y]), [rx] = city.toXY(p2.lng, p2.lat), rad = Math.max(3, Math.abs(rx - cx));
+    let best = -1, bd = Infinity;
+    for (let i = 0; i < city.agents; i++) {
+      const d = (ag.x[i] - cx) ** 2 + (ag.y[i] - cy) ** 2; if (d > rad * rad) continue;
+      const s = ag.state[i] % 10, w = d * (s === 1 || s === 2 ? 0.35 : 1);   // on favorise les malades
+      if (w < bd) { bd = w; best = i; }
+    }
+    return best;
+  }
+  map.on('click', e => {
+    if (placing || exPlacing) return;
+    const i = pickAgent(e); if (i < 0) return;
+    openPerson(i);
+  });
+  async function openPerson(i){
+    person.i = i; person.follow = false; person.addr = '';
+    if (!person.mk) { const el = document.createElement('div'); el.className = 'pmark'; person.mk = new maplibregl.Marker({ element: el }).setLngLat([0, 0]).addTo(map); }
+    $('card').classList.remove('show');
+    drawPerson(); drawTrips(); $('pcard').classList.add('show'); $('pcard').scrollTop = 0;
+    // adresse réelle : rue la plus proche sur la carte, complétée par l'annuaire d'adresses OSM
+    const ag = city.ag, h = city.places[ag.home[i]], st = streetOf(h.x, h.y), id = identity(i);
+    person.addr = st.street ? `${st.num || id.num} ${st.street}` : '';
+    drawPerson();
+    try {
+      const [lng, lat] = city.toLngLat(h.x, h.y);
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=fr&lat=${lat}&lon=${lng}`);
+      const a = (await r.json()).address || {};
+      if (person.i !== i) return;
+      const road = st.street || a.road || a.pedestrian || '';
+      person.addr = [road ? `${a.house_number || st.num || id.num} ${road}` : '', [a.postcode, a.city || a.town || a.village || a.suburb].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+      drawPerson();
+    } catch (err) {}
+  }
+  function closePerson(){
+    person.i = -1; person.follow = false; $('pcard').classList.remove('show');
+    if (person.mk) { person.mk.remove(); person.mk = null; }
+    const src = map.getSource('trajets'); if (src) src.setData({ type: 'FeatureCollection', features: [] });
+  }
+  const pLink = (k, txt) => `<a href="#" data-p="${k}">${txt}</a>`;
+  function drawPerson(){
+    const i = person.i; if (i < 0 || !city) return;
+    const c = city, ag = c.ag, id = identity(i), A = c.agents;
+    const T = ag.trip[i], here = T ? null : ag.loc[i];
+    // où est-elle maintenant ?
+    let now;
+    if (T) now = `En route vers ${ag.trip[i].dest === ag.home[i] ? 'son domicile' : ag.trip[i].dest === ag.work[i] && ag.type[i] !== 2 ? (ag.type[i] === 1 ? 'son école' : 'son travail') : placeLabel(T.dest)} ${T.car ? 'en voiture' : 'à pied'}`;
+    else now = here === ag.home[i] ? 'À son domicile' : here === ag.work[i] && ag.type[i] !== 2 ? (ag.type[i] === 1 ? 'En cours — ' : 'Au travail — ') + placeLabel(here, true) : 'À ' + placeLabel(here);
+    // santé, pour chaque maladie en circulation
+    const eng = engines();
+    const health = eng.length ? eng.map(([d, E, P]) => {
+      const s = E.st[i];
+      let t = `<div class="ph"><i style="background:${DIS_COL[d]}"></i><b>${P.name}</b><span style="color:${ST_COL[s]}">${ST_TXT[s]}${s === 2 ? (E.symp[i] ? ' (symptômes)' : ' (sans symptômes)') : ''}</span></div>`;
+      if (s) {
+        const how = E.how[i] === 255 ? 14 : E.how[i];
+        const flags = [];
+        if (s === 2 && E.sev[i] && E.symp[i]) flags.push('forme grave, hospitalisé·e');
+        else if (s === 2 && E.iso[i]) flags.push('isolé·e chez soi');
+        if (E.detected[i]) flags.push('testé·e positif');
+        if (E.quar[i] > clock.t) flags.push('en quarantaine (cas contact)');
+        t += `<div class="pl">Contaminé·e ${ago(E.tInf[i])} · ${HOW[how]}${E.by[i] >= 0 ? ' — par ' + pLink(E.by[i], identity(E.by[i]).name) : ''}${E.src[i] >= 0 && how <= 6 ? ' à ' + placeLabel(E.src[i]) : ''}</div>`;
+        if (flags.length) t += `<div class="pl">${flags.join(' · ')}</div>`;
+        const kids = []; for (let k = 0; k < A && kids.length < 40; k++) if (E.by[k] === i) kids.push(k);
+        if (kids.length) t += `<div class="pl">A contaminé ${kids.length >= 40 ? '40+' : kids.length} personne${kids.length > 1 ? 's' : ''} : ${kids.slice(0, 8).map(k => pLink(k, identity(k).name)).join(', ')}${kids.length > 8 ? '…' : ''}</div>`;
+      } else if (E.quar[i] > clock.t) t += `<div class="pl">En quarantaine (cas contact)</div>`;
+      return t;
+    }).join('') : '<div class="pl">Aucune maladie en circulation dans le quartier.</div>';
+    // foyer
+    const fam = []; for (let k = 0; k < A && fam.length < 8; k++) if (k !== i && ag.home[k] === ag.home[i]) fam.push(k);
+    // contacts : même lieu (hors trajet) ou croisés dans la rue (moins de 6 m)
+    const con = [];
+    for (let k = 0; k < A && con.length < 10; k++) {
+      if (k === i) continue;
+      if (!T && !ag.trip[k] && ag.loc[k] === here) con.push(k);
+      else if (T && ag.trip[k] && (ag.x[k] - ag.x[i]) ** 2 + (ag.y[k] - ag.y[i]) ** 2 < 36) con.push(k);
+    }
+    // derniers déplacements
+    const hist = [];
+    for (let q = 1; q <= c.HN; q++) {
+      const k = i * c.HN + (ag.hH[i] - q + c.HN) % c.HN; if (ag.hP[k] < 0) break;
+      const p = ag.hP[k];
+      hist.push(`<li><b>${fmtHM(ag.hT[k])}</b> ${p === ag.home[i] ? 'Retour au domicile' : p === ag.work[i] && ag.type[i] !== 2 ? (ag.type[i] === 1 ? 'Départ pour l’école — ' : 'Départ au travail — ') + placeLabel(p, true) : 'Sortie : ' + placeLabel(p)}${ag.hC[k] ? ' 🚗' : ''} <span>${ago(ag.hT[k])}</span></li>`);
+    }
+    const dot = s => `<i class="sd" style="background:${ST_COL[s % 10] }"></i>`;
+    const who = k => `${dot(ag.state[k])}${pLink(k, identity(k).name)} <span>${Math.round(c.epi.age[k])} an${Math.round(c.epi.age[k]) > 1 ? 's' : ''}</span>`;
+    const hours = ag.type[i] === 2 ? 'À la maison la plupart du temps' : `${fmtH(ag.dep[i])} – ${fmtH(ag.ret[i] % 24)}`;
+    const sand = game.mode === 'bac';
+    $('pcName').textContent = id.name;
+    $('pcBody').innerHTML = `
+      <div class="pid"><div class="pav" style="background:${ST_COL[ag.state[i] % 10]}">${id.first[0]}${id.last[0]}</div>
+        <div><b>${id.age < 3 ? (id.female ? 'Bébé (fille)' : 'Bébé (garçon)') : id.age < 15 ? (id.female ? 'Fille' : 'Garçon') : id.female ? 'Femme' : 'Homme'}, ${id.age} an${id.age > 1 ? 's' : ''}</b><span>${id.job}</span></div></div>
+      <div class="pgrid">
+        <div><span>Adresse</span><b>${person.addr || '…'}</b></div>
+        <div><span>Foyer</span><b>${fam.length + 1} personne${fam.length ? 's' : ''}</b></div>
+        ${ag.type[i] !== 2 ? `<div><span>${ag.type[i] === 1 ? 'Établissement' : 'Lieu de travail'}</span><b>${placeLabel(ag.work[i], true)}</b></div><div><span>Horaires</span><b>${hours}</b></div>` : ''}
+        <div><span>Transport</span><b>${ag.car[i] ? 'Voiture' : c.epi.transit[i] ? 'Transports en commun' : 'À pied'}</b></div>
+        <div><span>Sociabilité</span><b>${['Très réservé·e', 'Réservé·e', 'Normale', 'Sociable', 'Très sociable'][Math.min(4, Math.floor((c.epi.social[i] - 0.5) * 5))]}</b></div>
+      </div>
+      <div class="lbl">Maintenant</div><div class="pl">${now}</div>
+      <div class="lbl">Santé</div>${health}
+      ${fam.length ? `<div class="lbl">Vit avec</div><div class="plist">${fam.map(who).join('')}</div>` : ''}
+      <div class="lbl">En contact en ce moment</div><div class="plist">${con.length ? con.map(who).join('') : '<span class="pl">Personne à proximité</span>'}</div>
+      <div class="lbl">Derniers déplacements <small>(tracés sur la carte)</small></div><ul class="phist">${hist.join('') || '<li>Pas encore de déplacement observé</li>'}</ul>
+      <div class="row2"><button id="pcFollow" class="cta sec${person.follow ? ' on' : ''}">◎ Suivre</button>${sand && eng.length ? `<button id="pcInfect" class="cta sec">☣ Contaminer</button>` : ''}</div>
+      ${sand && eng.length > 1 ? `<select id="pcDis" class="pcsel">${eng.map(([d, , P]) => `<option value="${d}">${P.name}</option>`).join('')}</select>` : ''}`;
+    $('pcBody').querySelectorAll('[data-p]').forEach(a => a.onclick = ev => { ev.preventDefault(); const k = +a.dataset.p; openPerson(k); map.easeTo({ center: city.toLngLat(ag.x[k], ag.y[k]), duration: 600 }); });
+    $('pcFollow').onclick = () => { person.follow = !person.follow; $('pcFollow').classList.toggle('on', person.follow); };
+    if ($('pcInfect')) $('pcInfect').onclick = () => {
+      const d = $('pcDis') ? +$('pcDis').value : eng[0][0], e = eng.find(x => x[0] === d);
+      if (e && e[1].infectPerson(i)) { toast(`${id.name} est contaminé·e par ${e[2].name}`); drawPerson(); } else toast('Cette personne n’est pas saine pour cette maladie');
+    };
+  }
+  const fmtH = h => { const H = Math.floor(h), M = Math.round((h - H) * 60 / 5) * 5; return `${H}h${String(M % 60).padStart(2, '0')}`; };
+  function drawTrips(){
+    const src = map.getSource('trajets'); if (!src || person.i < 0 || !city) return;
+    const i = person.i, ag = city.ag, feats = [];
+    for (let q = 1; q <= Math.min(5, city.HN); q++) {
+      const k = i * city.HN + (ag.hH[i] - q + city.HN) % city.HN; if (ag.hP[k] < 0 || ag.hF[k] < 0) break;
+      const line = city.path(ag.hF[k], ag.hP[k], ag.hC[k]); if (!line || line.length < 2) continue;
+      feats.push({ type: 'Feature', properties: { col: q === 1 ? '#ffd166' : '#ffffff', o: q === 1 ? 0.95 : 0.65 - q * 0.1 }, geometry: { type: 'LineString', coordinates: line } });
+    }
+    src.setData({ type: 'FeatureCollection', features: feats });
+  }
+  $('pcClose').onclick = closePerson;
+  // suivi en direct de la personne (position, fiche, trajets)
+  let pTick = 0;
+  setInterval(() => {
+    if (person.i < 0) return;
+    if (!city || person.i >= city.agents) { closePerson(); return; }
+    const ag = city.ag, ll = city.toLngLat(ag.x[person.i], ag.y[person.i]);
+    person.mk.setLngLat(ll);
+    if (person.follow && !map.isMoving()) map.easeTo({ center: ll, duration: 240, easing: t => t });
+    if (++pTick % 8 === 0 && !$('pcBody').matches(':hover')) { drawPerson(); drawTrips(); }
+  }, 250);
   const LEVEL_TXT = ['Aucune mesure', 'Surveillance renforcée', 'Masques et gestes barrières', 'Écoles et frontières fermées', 'Confinement général'];
   let cardCountry = -1;
   function showCountry(k){
@@ -2338,7 +2851,7 @@
   $('cardClose').onclick = () => $('card').classList.remove('show');
   $('cardLevels').querySelectorAll('button').forEach(b => b.onclick = () => {
     if (cardCountry < 0) return;
-    epi.worker.postMessage({ type: 'country', c: cardCountry, level: +b.dataset.l, lock: true });
+    toWorkers({ type: 'country', c: cardCountry, level: +b.dataset.l, lock: true }); crisisUI.locks[cardCountry] = +b.dataset.l;
     $('cardLevels').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   });
 
@@ -2643,7 +3156,7 @@
     };
   })();
   const workerWait = new Map();
-  function askWorker(msg, type){ return new Promise(res => { workerWait.set(type + ':' + msg.id, res); epi.worker.postMessage(msg); }); }
+  function askWorker(msg, type, w){ return new Promise(res => { workerWait.set(type + ':' + msg.id, res); (w || epi.worker).postMessage(msg); }); }
 
   async function saveGame(id, name, silent){
     if (!epi.running && !epi.totals) return;
@@ -2651,14 +3164,21 @@
     if (!r || !r.state) return;
     const c = map.getCenter();
     const main = {
-      epi: { p: epi.p, place: epi.place, hist: epi.hist, log: epi.log.slice(-30), lastFlight: epi.lastFlight, running: epi.running },
+      epi: { p: epi.p, place: epi.place, hist: epi.hist, log: epi.log.slice(-30), lastFlight: epi.lastFlight, running: epi.running, startGame: epi.startGame },
       game: { mode: game.mode, goal: game.goal, dna: game.dna, owned: [...game.owned], marks: [...game.marks], lastTrickle: game.lastTrickle, news: game.news, base: game.base },
       clock: { t: clock.t, speed: clock.speed }, zero: zeroLngLat ? [zeroLngLat.lng, zeroLngLat.lat] : null,
       cam: { center: [c.lng, c.lat], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() }, realSavedAt: Date.now()
     };
     const meta = { id, name: name || `${epi.p.name} · ${epi.place.split(',')[0]} · jour ${Math.floor(epi.day)}`, savedAt: Date.now(), day: Math.floor(epi.day),
       mode: game.mode, pathogen: epi.p.name, place: epi.place, running: epi.running, cases: epi.totals ? epi.totals.cases : 0 };
-    await saves.put(meta, { id, worker: r.state, main });
+    // maladies ajoutées (bac à sable)
+    const ex = [];
+    for (const X of extras.slice()) {
+      const r2 = await askWorker({ type: 'save', id: id + '~' + X.d }, 'saved', X.worker);
+      if (r2 && r2.state) ex.push({ d: X.d, p: X.p, place: X.place, lng: X.lng, lat: X.lat, running: X.running, over: !!X.over, state: r2.state });
+    }
+    if (ex.length) { const more = ` + ${ex.length} autre${ex.length > 1 ? 's' : ''}`; meta.pathogen += more; if (!name) meta.name = meta.name.replace(' · ', more + ' · '); }
+    await saves.put(meta, { id, worker: r.state, main, extras: ex });
     if (!silent) { toast('Partie sauvegardée'); }
   }
 
@@ -2676,6 +3196,13 @@
     if (zeroLngLat) { const el = document.createElement('div'); el.className = 'zero'; zeroMarker = new maplibregl.Marker({ element: el }).setLngLat(zeroLngLat).addTo(map); }
     if (city) { city = null; cityLayer.c = null; }      // le quartier sera regénéré à partir de l'état mondial
     await askWorker({ type: 'load', id, state: rec.worker }, 'loaded');
+    epi.startGame = M.epi.startGame || { mode: game.mode, goal: game.goal, noResponse: false, noCure: false, research: 1 };
+    for (const e of rec.extras || []) {
+      const X = newExtra(e.d, e.p, e.place, e.lng, e.lat);
+      await X.ready;
+      await askWorker({ type: 'load', id: id + '~' + e.d, state: e.state }, 'loaded', X.worker);
+      X.running = e.running; X.over = e.over; X.simT = M.clock.t; X.waiting = false;
+    }
     epiTex.on = 1; epi.running = M.epi.running !== false; epi.waiting = false; epi.simT = M.clock.t;
     for (const n of (M.game.news || []).slice().reverse()) pushNews(n.t);
     // interface « partie en cours »
@@ -2719,7 +3246,7 @@
   }
 
   // ---- Sauvegarde automatique
-  setInterval(() => { if (epi.running && !catching) saveGame('auto', null, true).catch(() => {}); }, 20000);
+  setInterval(() => { if ((epi.running || extras.some(X => X.running)) && !catching) saveGame('auto', null, true).catch(() => {}); }, 20000);
 
   // ---- Pendant mon absence
   const settingsAbs = () => localStore.get('absence') || 'vitesse';
@@ -2753,7 +3280,7 @@
     $('cuBar').style.width = (m.done / m.total * 100).toFixed(1) + '%';
     $('cuText').textContent = `Jour ${Math.floor(m.day)} · ${fmtN.format(m.totals.cases)} cas · ${fmtN.format(m.totals.D)} morts`;
   }
-  $('cuSkip').onclick = () => epi.worker.postMessage({ type: 'stopCatchUp' });
+  $('cuSkip').onclick = () => toWorkers({ type: 'stopCatchUp' });
   // appelé à chaque état reçu : si un rattrapage était en cours, on affiche le bilan
   function absenceDone(m){
     if (!catching || !absence) return;
@@ -2805,7 +3332,7 @@
   };
   const TESTS = [0, 0.2, 0.5, 1, 2, 4, 8, 15, 30];
   const CLOSE_L = { bars: 'Bars', restos: 'Restaurants', ecoles: 'Écoles', culte: 'Lieux de culte', sport: 'Salles de sport', evenements: 'Événements', commerces: 'Commerces non essentiels' };
-  const crisisUI = { scope: 'monde', pol: null, pols: {}, crisis: { unlimited: true, budget: 3000, research: 0, production: 0, priority: 'ages', alloc: 'equitable', mandatory: false, seq: false } };
+  const crisisUI = { scope: 'monde', pol: null, pols: {}, locks: {}, crisis: { unlimited: true, budget: 3000, research: 0, production: 0, priority: 'ages', alloc: 'equitable', mandatory: false, seq: false } };
 
   $('bCrisis').onclick = () => { openCrisis(); };
   $('crisisClose').onclick = () => $('crisisPanel').classList.remove('show');
@@ -2837,12 +3364,12 @@
   let sendT = null;
   function sendPol(){
     clearTimeout(sendT);
-    sendT = setTimeout(() => epi.worker.postMessage({ type: 'policy', scope: crisisUI.scope, pol: crisisUI.pol, crisis: crisisUI.crisis }), 150);
+    sendT = setTimeout(() => toWorkers({ type: 'policy', scope: crisisUI.scope, pol: crisisUI.pol, crisis: crisisUI.crisis }), 150);
   }
-  function setCrisis(k, v){ crisisUI.crisis[k] = v; epi.worker.postMessage({ type: 'policy', scope: '__none__', pol: null, crisis: crisisUI.crisis }); drawCrisis(); }
+  function setCrisis(k, v){ crisisUI.crisis[k] = v; toWorkers({ type: 'policy', scope: '__none__', pol: null, crisis: crisisUI.crisis }); drawCrisis(); }
   $('crRelease').onclick = () => {
     delete crisisUI.pols[crisisUI.scope]; crisisUI.pol = null;
-    epi.worker.postMessage({ type: 'policy', scope: crisisUI.scope, pol: null });
+    toWorkers({ type: 'policy', scope: crisisUI.scope, pol: null });
     toast(crisisUI.scope === 'monde' ? 'Les pays reprennent la main sur leurs mesures' : 'Ce pays reprend la main sur ses mesures');
     loadScope(crisisUI.scope);
   };
