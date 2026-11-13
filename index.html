@@ -335,7 +335,7 @@
     canvasContextAttributes: { antialias: !MOBILE },
     fadeDuration: MOBILE ? 150 : 300
   });
-  window.vecteur = { map, get clock(){ return clock; } };
+  window.vecteur = { map, get clock(){ return clock; }, get city(){ return city; } };
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
   const $ = id => document.getElementById(id);
@@ -361,7 +361,7 @@
   function start(){
     if (started) return; started = true;
     try { map.addLayer(nightLayer, 'boundary-state'); } catch (e) { console.warn('nuit', e); }
-    try { map.addLayer(popLayer, 'label-road'); } catch (e) { console.warn('population', e); }
+    try { map.addLayer(popLayer, 'label-road'); map.addLayer(cityLayer, 'label-road'); } catch (e) { console.warn('population', e); }
     loadPopulation().catch(e => { console.warn(e); $('popLine').textContent = 'Population indisponible'; });
     syncTerrain();
     map.once('idle', hideSplash);
@@ -512,17 +512,35 @@
     }
   };
 
-  /* ============ Couche population (millions de points) ============ */
-  const PEOPLE_PER_DOT = 6000;
+  /* ============ Couche population (vue planète → ville) ============ */
   const WORLD_POP = 8191988536;
+  // Partie commune aux deux couches de points : rendu d'un point lisible de jour comme de nuit
+  const DOT_FS = `#version 300 es
+    precision mediump float;
+    in float v_night; in float v_a; in float v_kind; out vec4 o;
+    void main(){
+      vec2 c = gl_PointCoord * 2.0 - 1.0;
+      float r = length(c);
+      if (r > 1.0) discard;
+      vec3 day = v_kind > 1.5 ? vec3(1.0, 0.82, 0.30) : vec3(0.45, 0.93, 1.0);
+      vec3 night = vec3(1.0, 0.74, 0.40);
+      vec3 core = mix(day, night, v_night);
+      float coreA = 1.0 - smoothstep(0.42, 0.62, r);           // cœur net
+      float ring = (1.0 - smoothstep(0.62, 1.0, r)) * (1.0 - v_night * 0.85); // contour sombre (surtout de jour)
+      float glow = exp(-r * r * 3.0) * v_night * 0.6;           // halo la nuit
+      vec3 col = core * (coreA + glow);
+      float a = max(coreA, max(ring * 0.75, glow));
+      o = vec4(col, a) * v_a;
+    }`;
+
   const popLayer = {
-    id: 'population', type: 'custom', renderingMode: '2d', programs: {}, count: 0, visible: true,
-    onAdd(m, gl){ this.gl = gl; this.buf = gl.createBuffer(); },
-    upload(arr){
+    id: 'population', type: 'custom', renderingMode: '2d', programs: {}, count: 0, visible: true, fade: 1,
+    onAdd(m, gl){ this.gl = gl; this.buf = gl.createBuffer(); this.wbuf = gl.createBuffer(); },
+    upload(home, work){
       const gl = this.gl;
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
-      gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
-      this.count = arr.length / 2;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf); gl.bufferData(gl.ARRAY_BUFFER, home, gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.wbuf); gl.bufferData(gl.ARRAY_BUFFER, work, gl.STATIC_DRAW);
+      this.count = home.length / 2;
       map.triggerRepaint();
     },
     program(gl, sd){
@@ -530,90 +548,493 @@
       if (!p) p = this.programs[sd.variantName] = compile(gl, `#version 300 es
         ${sd.vertexShaderPrelude}
         ${sd.define}
-        in vec2 a_pos;
-        uniform vec3 u_sun; uniform float u_time; uniform float u_size; uniform float u_alpha;
-        out float v_night; out float v_a;
+        in vec2 a_pos; in vec2 a_work;
+        uniform vec3 u_sun; uniform float u_utc; uniform float u_size; uniform float u_alpha;
+        out float v_night; out float v_a; out float v_kind;
         ${GLSL_GEO}
         float hash(float n){ return fract(sin(n) * 43758.5453123); }
         void main(){
           float id = float(gl_VertexID);
-          float h1 = hash(id * 0.1371 + 1.3), h2 = hash(id * 0.7193 + 7.1);
-          // on casse la grille de quantification, puis petite errance (≈ quelques centaines de mètres)
-          vec2 p = a_pos + (vec2(h1, h2) - 0.5) / 65535.0;
-          float ph = h1 * 6.2832, sp = 0.4 + h2;
-          p += vec2(cos(u_time * 0.07 * sp + ph), sin(u_time * 0.05 * sp + ph * 1.7)) * (0.45 / 65535.0);
-          gl_Position = projectTile(p);
-          float d = dot(mercToNormal(p), u_sun);
-          v_night = smoothstep(0.04, -0.12, d);
-          v_a = u_alpha * mix(0.75, 1.15, h2);
-          gl_PointSize = u_size * mix(0.75, 1.3, h1);
-        }`, `#version 300 es
-        precision mediump float;
-        in float v_night; in float v_a; out vec4 o;
-        void main(){
-          vec2 c = gl_PointCoord * 2.0 - 1.0;
-          float r = dot(c, c);
-          if (r > 1.0) discard;
-          float f = exp(-r * 2.6);
-          vec3 day = vec3(1.0, 0.97, 0.9);
-          vec3 night = vec3(1.0, 0.72, 0.38);
-          vec3 col = mix(day, night, v_night);
-          float a = v_a * f * mix(0.42, 1.0, v_night);
-          o = vec4(col * a, a);
-        }`);
+          float h1 = hash(id * 0.1371 + 1.3), h2 = hash(id * 0.7193 + 7.1), h3 = hash(id * 0.3117 + 2.9), h4 = hash(id * 0.5591 + 5.3);
+          vec2 jit = (vec2(h1, h2) - 0.5) / 65535.0;
+          vec2 home = a_pos + jit, work = a_work + jit;
+          // Heure solaire locale du point (0–24)
+          float lonDeg = home.x * 360.0 - 180.0;
+          float h = mod(u_utc + lonDeg / 15.0, 24.0);
+          // Distance du trajet → durée (≈ 25 km/h de porte à porte, entre 15 min et 1 h 30)
+          float latR = 2.0 * atan(exp(V_PI * (1.0 - 2.0 * home.y))) - V_PI * 0.5;
+          float km = length(work - home) * 40075.0 * cos(latR);
+          float dur = clamp(km / 25.0, 0.25, 1.5);
+          float dep = 6.3 + h3 * 3.0;          // départ entre 6 h 20 et 9 h 20
+          float ret = 16.3 + h4 * 3.2;          // retour entre 16 h 20 et 19 h 30
+          float p = smoothstep(dep, dep + dur, h) * (1.0 - smoothstep(ret, ret + dur, h));
+          vec2 pos = mix(home, work, p);
+          gl_Position = projectTile(pos);
+          v_night = smoothstep(0.04, -0.12, dot(mercToNormal(pos), u_sun));
+          float moving = step(0.02, p) * step(p, 0.98);
+          v_kind = moving * 2.0;
+          v_a = u_alpha * mix(0.8, 1.0, h2);
+          gl_PointSize = u_size * mix(0.85, 1.2, h1) * (1.0 + moving * 0.15);
+        }`, DOT_FS);
       return p;
     },
     render(gl, a){
-      if (!this.count || !this.visible) return;
-      const z = map.getZoom(), pr = map.getPixelRatio ? map.getPixelRatio() : (window.devicePixelRatio || 1);
+      if (!this.count || !this.visible || this.fade <= 0.01) return;
+      const z = map.getZoom(), pr = map.getPixelRatio();
       const p = this.program(gl, a.shaderData);
       gl.useProgram(p); setProjection(gl, p, a.defaultProjectionData);
       gl.uniform3f(p.u('u_sun'), ...(this.sun || sunDir(clock.t)));
-      gl.uniform1f(p.u('u_time'), performance.now() / 1000);
-      const size = Math.min(1.1 + Math.max(z - 1.5, 0) * 0.42, 5.5) * pr;
-      gl.uniform1f(p.u('u_size'), size);
-      gl.uniform1f(p.u('u_alpha'), Math.min(0.32 + Math.max(z - 1, 0) * 0.09, 0.9));
+      const d = new Date(clock.t);
+      gl.uniform1f(p.u('u_utc'), d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600);
+      gl.uniform1f(p.u('u_size'), Math.min(1.5 + Math.max(z - 1.5, 0) * 0.5, 6.5) * pr);
+      gl.uniform1f(p.u('u_alpha'), Math.min(0.55 + Math.max(z - 1, 0) * 0.06, 1) * this.fade);
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.disable(gl.DEPTH_TEST);
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
-      const loc = gl.getAttribLocation(p, 'a_pos');
-      gl.enableVertexAttribArray(loc);
-      gl.vertexAttribPointer(loc, 2, gl.UNSIGNED_SHORT, true, 0, 0);
+      const l1 = gl.getAttribLocation(p, 'a_pos'), l2 = gl.getAttribLocation(p, 'a_work');
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf); gl.enableVertexAttribArray(l1);
+      gl.vertexAttribPointer(l1, 2, gl.UNSIGNED_SHORT, true, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.wbuf); gl.enableVertexAttribArray(l2);
+      gl.vertexAttribPointer(l2, 2, gl.UNSIGNED_SHORT, true, 0, 0);
       gl.drawArrays(gl.POINTS, 0, this.count);
-      gl.disableVertexAttribArray(loc);
+      gl.disableVertexAttribArray(l1); gl.disableVertexAttribArray(l2);
     }
   };
 
-  // Chargement progressif des points (téléphone : 450 000 points ; ordinateur : 1,37 million)
+  let DOTS = null;   // copie des positions (pour estimer la population d'une zone)
+  async function fetchBin(f, onProgress){
+    const res = await fetch(f);
+    if (!res.ok) throw new Error(f + ' : ' + res.status);
+    const total = +res.headers.get('content-length') || 0;
+    const reader = res.body.getReader(); const chunks = []; let got = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value); got += value.length;
+      if (total) onProgress(got / total);
+    }
+    const buf = new Uint8Array(got); let o = 0;
+    for (const c of chunks) { buf.set(c, o); o += c.length; }
+    return buf;
+  }
+  const concat = parts => { const all = new Uint8Array(parts.reduce((s, x) => s + x.length, 0)); let o = 0; for (const x of parts) { all.set(x, o); o += x.length; } return all; };
   async function loadPopulation(){
-    const files = MOBILE ? ['data/dots-a.bin'] : ['data/dots-a.bin', 'data/dots-b.bin'];
-    const parts = []; let done = 0;
+    const sets = MOBILE ? ['a'] : ['a', 'b'];
+    const homes = [], works = [];
     $('loadBar').style.display = 'block';
-    for (const f of files) {
-      const res = await fetch(f);
-      if (!res.ok) throw new Error(f + ' : ' + res.status);
-      const total = +res.headers.get('content-length') || 0;
-      const reader = res.body.getReader(); const chunks = []; let got = 0;
-      for (;;) {
-        const { done: end, value } = await reader.read();
-        if (end) break;
-        chunks.push(value); got += value.length;
-        if (total) $('loadBar').firstChild.style.width = Math.round(((done + got / total) / files.length) * 100) + '%';
-      }
-      const buf = new Uint8Array(got); let o = 0;
-      for (const c of chunks) { buf.set(c, o); o += c.length; }
-      parts.push(buf); done++;
-      const all = new Uint8Array(parts.reduce((s, x) => s + x.length, 0)); o = 0;
-      for (const x of parts) { all.set(x, o); o += x.length; }
-      popLayer.upload(new Uint16Array(all.buffer, 0, all.length >> 1));
+    for (let i = 0; i < sets.length; i++) {
+      const prog = (k, f) => $('loadBar').firstChild.style.width = Math.round(((i * 2 + k + f) / (sets.length * 2)) * 100) + '%';
+      homes.push(await fetchBin(`data/dots-${sets[i]}.bin`, f => prog(0, f)));
+      works.push(await fetchBin(`data/work-${sets[i]}.bin`, f => prog(1, f)));
+      const h = concat(homes), w = concat(works);
+      DOTS = new Uint16Array(h.buffer, 0, h.length >> 1);
+      popLayer.upload(DOTS, new Uint16Array(w.buffer, 0, w.length >> 1));
       showPopLine();
     }
     $('loadBar').style.display = 'none';
   }
   function showPopLine(){
+    if (city && city.ready && popLayer.fade < 0.5) {
+      $('popLine').innerHTML = `<b>${city.agents.toLocaleString('fr-FR')} habitants</b> simulés ici · 1 point ≈ ${city.ratio.toLocaleString('fr-FR')} hab.`;
+      return;
+    }
+    if (!popLayer.count) return;
     const perDot = Math.round(WORLD_POP / popLayer.count / 100) * 100;
     $('popLine').innerHTML = `<b>${(WORLD_POP / 1e9).toFixed(2).replace('.', ',')} milliards</b> d'humains · 1 point ≈ ${perDot.toLocaleString('fr-FR')} hab.`;
   }
+
+  /* ============ Vue rue : habitants individuels ============ */
+  // À partir du zoom 13,5, on génère de vrais habitants à partir des bâtiments et des rues
+  // OpenStreetMap visibles : ils dorment chez eux, partent travailler, déjeunent, rentrent,
+  // sortent le soir… à pied ou en voiture, en suivant le réseau routier (itinéraires A*).
+  const CITY_ZOOM = 13.5;
+  const CITY_MAX = MOBILE ? 9000 : 26000;
+  let city = null, cityBuilding = false;
+
+  const CAR_ROADS = new Set(['motorway','trunk','primary','secondary','tertiary','minor','service']);
+  const WALK_ROADS = new Set(['primary','secondary','tertiary','minor','service','path','track']);
+
+  function buildCity(){
+    if (cityBuilding || !DOTS) return;
+    const z = map.getZoom(); if (z < CITY_ZOOM) return;
+    cityBuilding = true;
+    const t0 = performance.now();
+    const c = map.getCenter(), lat0 = c.lat, lng0 = c.lng;
+    const cosL = Math.cos(lat0 * Math.PI / 180);
+    const KX = 111320 * cosL, KY = 110574;
+    // Zone simulée : le centre de l'écran ± HALF mètres
+    const HALF = Math.min(4500, Math.max(1200, 1.6 * 156543 * cosL / Math.pow(2, z) * Math.max(innerWidth, innerHeight) / 2));
+    const toXY = (lng, lat) => [(lng - lng0) * KX, (lat - lat0) * KY];
+    const inside = (x, y) => Math.abs(x) < HALF && Math.abs(y) < HALF;
+
+    // ---- 1. Graphe routier
+    const nodeIdx = new Map(), nx = [], ny = [], adj = [];
+    const SNAP = 1.5;
+    function node(x, y){
+      const k = Math.round(x / SNAP) + ',' + Math.round(y / SNAP);
+      let i = nodeIdx.get(k);
+      if (i === undefined) { i = nx.length; nodeIdx.set(k, i); nx.push(x); ny.push(y); adj.push([]); }
+      return i;
+    }
+    const seen = new Set();
+    let roadFeatures = [];
+    try { roadFeatures = map.querySourceFeatures('omt', { sourceLayer: 'transportation' }); } catch (e) {}
+    for (const f of roadFeatures) {
+      const cls = f.properties.class;
+      const car = CAR_ROADS.has(cls), walk = WALK_ROADS.has(cls);
+      if (!car && !walk) continue;
+      const g = f.geometry;
+      const lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+      for (const ln of lines) {
+        let pn = -1, px = 0, py = 0, pin = false, first = true;
+        for (const [lng, lat] of ln) {
+          const [x, y] = toXY(lng, lat); const ins = inside(x, y);
+          if (!first && (ins || pin)) {
+            const a = pn >= 0 ? pn : node(px, py), b = node(x, y);
+            if (a !== b) {
+              const key = a < b ? a + '-' + b : b + '-' + a;
+              if (!seen.has(key)) {
+                seen.add(key);
+                const m = (car ? 1 : 0) | (walk ? 2 : 0), l = Math.hypot(x - px, y - py);
+                adj[a].push(b, l, m); adj[b].push(a, l, m);
+              }
+            }
+            pn = b;
+          } else pn = -1;
+          px = x; py = y; pin = ins; first = false;
+        }
+      }
+    }
+    const N = nx.length;
+    if (N < 50) { cityBuilding = false; return; }
+    // Plus grande composante connexe (pour que tout le monde puisse aller partout)
+    const comp = new Int32Array(N).fill(-1); let best = -1, bestSize = 0, cid = 0;
+    for (let s = 0; s < N; s++) {
+      if (comp[s] >= 0) continue;
+      const st = [s]; comp[s] = cid; let size = 0;
+      while (st.length) { const u = st.pop(); size++; const A = adj[u]; for (let k = 0; k < A.length; k += 3) { const v = A[k]; if (comp[v] < 0) { comp[v] = cid; st.push(v); } } }
+      if (size > bestSize) { bestSize = size; best = cid; }
+      cid++;
+    }
+    // Compactage en tableaux typés (CSR)
+    const keep = new Int32Array(N).fill(-1); let M = 0;
+    for (let i = 0; i < N; i++) if (comp[i] === best) keep[i] = M++;
+    const X = new Float64Array(M), Y = new Float64Array(M), off = new Int32Array(M + 1);
+    let E = 0;
+    for (let i = 0; i < N; i++) if (keep[i] >= 0) { X[keep[i]] = nx[i]; Y[keep[i]] = ny[i]; E += adj[i].length / 3; }
+    const to = new Int32Array(E), len = new Float32Array(E), mode = new Uint8Array(E);
+    let e = 0;
+    for (let i = 0; i < N; i++) {
+      const j = keep[i]; if (j < 0) continue;
+      off[j] = e; const A = adj[i];
+      for (let k = 0; k < A.length; k += 3) { to[e] = keep[A[k]]; len[e] = A[k + 1]; mode[e] = A[k + 2]; e++; }
+    }
+    off[M] = e;
+    // Index spatial des nœuds (cases de 60 m)
+    const CELL = 60, grid = new Map(), gridCar = new Map();
+    const carOK = new Uint8Array(M);
+    for (let i = 0; i < M; i++) for (let k = off[i]; k < off[i + 1]; k++) if (mode[k] & 1) { carOK[i] = 1; break; }
+    for (let i = 0; i < M; i++) {
+      const k = Math.floor(X[i] / CELL) + ',' + Math.floor(Y[i] / CELL);
+      let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(i);
+      if (carOK[i]) { let b = gridCar.get(k); if (!b) gridCar.set(k, b = []); b.push(i); }
+    }
+    function nearest(x, y, G = grid){
+      const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+      for (let r = 0; r < 12; r++) {
+        let bi = -1, bd = Infinity;
+        for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) {
+          if (Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
+          const a = G.get((cx + i) + ',' + (cy + j)); if (!a) continue;
+          for (const n of a) { const d = (X[n] - x) ** 2 + (Y[n] - y) ** 2; if (d < bd) { bd = d; bi = n; } }
+        }
+        if (bi >= 0) return bi;
+      }
+      return 0;
+    }
+
+    // ---- 2. Bâtiments (logements et lieux d'activité)
+    let bf = [];
+    try { bf = map.querySourceFeatures('omt', { sourceLayer: 'building' }); } catch (e) {}
+    const bSeen = new Set(), B = [];
+    // (les tuiles regroupent souvent des centaines de bâtiments dans un seul MultiPolygon)
+    const rings = [];
+    for (const f of bf) {
+      const g = f.geometry, h = +f.properties.render_height || 7;
+      if (g.type === 'Polygon') rings.push([g.coordinates[0], h]);
+      else if (g.type === 'MultiPolygon') for (const poly of g.coordinates) rings.push([poly[0], h]);
+    }
+    for (const [ring, h] of rings) {
+      if (!ring || ring.length < 4) continue;
+      let sx = 0, sy = 0, area = 0; const pts = ring.map(([lng, lat]) => toXY(lng, lat));
+      for (let i = 0; i < pts.length - 1; i++) { sx += pts[i][0]; sy += pts[i][1]; area += pts[i][0] * pts[i + 1][1] - pts[i + 1][0] * pts[i][1]; }
+      const n = pts.length - 1; const cx = sx / n, cy = sy / n; area = Math.abs(area) / 2;
+      if (!inside(cx, cy) || area < 25) continue;
+      const k = Math.round(cx / 3) + ',' + Math.round(cy / 3); if (bSeen.has(k)) continue; bSeen.add(k);
+      const floors = Math.max(1, Math.round(h / 3.2));
+      B.push({ x: cx, y: cy, r: Math.min(Math.sqrt(area) * 0.3, 22), floorArea: area * floors, h });
+    }
+    // Lieux d'activité ponctuels (commerces, écoles, bureaux…)
+    let poi = [];
+    try { poi = map.querySourceFeatures('omt', { sourceLayer: 'poi' }); } catch (e) {}
+    const P = [];
+    for (const f of poi) {
+      if (f.geometry.type !== 'Point') continue;
+      const [x, y] = toXY(...f.geometry.coordinates); if (!inside(x, y)) continue;
+      const k = Math.round(x / 4) + ',' + Math.round(y / 4); if (bSeen.has('p' + k)) continue; bSeen.add('p' + k);
+      P.push({ x, y, cls: f.properties.class });
+    }
+    if (!B.length) for (let i = 0; i < M; i += 7) B.push({ x: X[i], y: Y[i], r: 8, floorArea: 200, h: 6 });
+    for (const b of B) { b.node = nearest(b.x, b.y); b.carNode = nearest(b.x, b.y, gridCar); }
+    for (const p of P) { p.node = nearest(p.x, p.y); p.carNode = nearest(p.x, p.y, gridCar); }
+
+    // ---- 3. Combien d'habitants ? (estimation par la grille de population mondiale)
+    const mx0 = (lng0 + 180) / 360, my0 = (1 - Math.log(Math.tan(Math.PI / 4 + lat0 * Math.PI / 360)) / Math.PI) / 2;
+    const WM = 40075016.686 * cosL;           // mètres par unité Mercator à cette latitude
+    const qx0 = (mx0 - HALF / WM) * 65535, qx1 = (mx0 + HALF / WM) * 65535;
+    const qy0 = (my0 - HALF / WM) * 65535, qy1 = (my0 + HALF / WM) * 65535;
+    let inBox = 0;
+    for (let i = 0; i < DOTS.length; i += 2) { const qx = DOTS[i], qy = DOTS[i + 1]; if (qx > qx0 && qx < qx1 && qy > qy0 && qy < qy1) inBox++; }
+    const peoplePerDot = WORLD_POP / (DOTS.length / 2);
+    const realPop = Math.max(inBox * peoplePerDot, 500);
+    const ratio = Math.max(1, Math.ceil(realPop / CITY_MAX));
+    const A = Math.min(CITY_MAX, Math.round(realPop / ratio));
+
+    // Tirage pondéré
+    function sampler(items, w){
+      const cum = new Float64Array(items.length); let s = 0;
+      for (let i = 0; i < items.length; i++) { s += w(items[i]); cum[i] = s; }
+      return () => { const r = Math.random() * s; let lo = 0, hi = cum.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < r) lo = m + 1; else hi = m; } return lo; };
+    }
+    const homeOf = sampler(B, b => b.h > 28 ? b.floorArea * 0.6 : b.floorArea);        // les tours de bureaux logent moins
+    const workOf = sampler(B, b => b.floorArea * (b.h > 18 ? 2.2 : 1) * (b.floorArea > 2500 ? 1.6 : 1));
+    // Destinations : bâtiments (index ≥ 0) ou POI (index négatif)
+    const places = B.map(b => ({ x: b.x, y: b.y, r: b.r, node: b.node, carNode: b.carNode })).concat(P.map(p => ({ x: p.x, y: p.y, r: 6, node: p.node, carNode: p.carNode })));
+    const nearbyPlace = (x, y, maxD) => {
+      for (let t = 0; t < 12; t++) { const i = Math.floor(Math.random() * places.length); const p = places[i]; if ((p.x - x) ** 2 + (p.y - y) ** 2 < maxD * maxD) return i; }
+      return Math.floor(Math.random() * places.length);
+    };
+
+    // ---- 4. Habitants et emplois du temps
+    const ag = {
+      n: A,
+      home: new Int32Array(A), work: new Int32Array(A), errand: new Int32Array(A), evening: new Int32Array(A),
+      type: new Uint8Array(A), car: new Uint8Array(A),
+      dep: new Float32Array(A), ret: new Float32Array(A), errS: new Float32Array(A), errE: new Float32Array(A),
+      eveS: new Float32Array(A), eveE: new Float32Array(A), lunch: new Uint8Array(A),
+      jx: new Float32Array(A), jy: new Float32Array(A),
+      loc: new Int32Array(A),          // lieu actuel (index dans places)
+      trip: new Array(A).fill(null),
+      x: new Float32Array(A), y: new Float32Array(A), kind: new Float32Array(A)
+    };
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    for (let i = 0; i < A; i++) {
+      const h = homeOf(); ag.home[i] = h;
+      const r = Math.random();
+      ag.type[i] = r < 0.52 ? 0 : r < 0.68 ? 1 : 2;            // 0 actif, 1 élève, 2 autre (retraité, sans emploi…)
+      const hb = places[h];
+      ag.work[i] = ag.type[i] === 1 ? nearbyPlace(hb.x, hb.y, 1200) : workOf();
+      ag.errand[i] = nearbyPlace(hb.x, hb.y, 900);
+      ag.evening[i] = nearbyPlace(hb.x, hb.y, 2500);
+      const dist = Math.hypot(places[ag.work[i]].x - hb.x, places[ag.work[i]].y - hb.y);
+      ag.car[i] = (ag.type[i] === 0 && dist > 900 && Math.random() < 0.55) || (dist > 2500 && Math.random() < 0.8) || Math.random() < 0.08 ? 1 : 0;
+      ag.dep[i] = ag.type[i] === 1 ? rnd(7.4, 8.3) : rnd(6.4, 9.4);
+      ag.ret[i] = ag.type[i] === 1 ? rnd(16.2, 17.8) : rnd(16.5, 19.6);
+      ag.lunch[i] = ag.type[i] === 0 && Math.random() < 0.3 ? 1 : 0;
+      ag.errS[i] = rnd(9.5, 17.5); ag.errE[i] = ag.errS[i] + rnd(0.4, 1.8);
+      if (ag.type[i] !== 2 && Math.random() < 0.7) ag.errS[i] = ag.errE[i] = -1;
+      if (Math.random() < 0.22) { ag.eveS[i] = rnd(19, 21.5); ag.eveE[i] = ag.eveS[i] + rnd(1, 2.8); } else ag.eveS[i] = ag.eveE[i] = -1;
+      const a = Math.random() * 6.283, d = Math.sqrt(Math.random());
+      ag.jx[i] = Math.cos(a) * d; ag.jy[i] = Math.sin(a) * d;
+    }
+    // Où doit se trouver l'habitant i à l'heure locale h ?
+    function wanted(i, h){
+      if (ag.eveS[i] >= 0 && h >= ag.eveS[i] && h < ag.eveE[i]) return ag.evening[i];
+      if (ag.type[i] !== 2 && h >= ag.dep[i] && h < ag.ret[i]) {
+        if (ag.lunch[i] && h >= 12.1 && h < 13.2) return ag.errand[i] === ag.work[i] ? ag.work[i] : ag.errand[i];
+        return ag.work[i];
+      }
+      if (ag.errS[i] >= 0 && h >= ag.errS[i] && h < ag.errE[i]) return ag.errand[i];
+      return ag.home[i];
+    }
+    // Depuis combien d'heures le programme de l'habitant i a-t-il changé ?
+    function sinceChange(i, h){
+      const marks = [ag.dep[i], ag.ret[i], ag.errS[i], ag.errE[i], ag.eveS[i], ag.eveE[i], 12.1, 13.2];
+      let best = 24;
+      for (const m of marks) { if (m < 0) continue; const d = ((h - m) % 24 + 24) % 24; if (d < best) best = d; }
+      return best;
+    }
+    const localHour = () => { const d = new Date(clock.t); return ((d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600 + lng0 / 15) % 24 + 24) % 24; };
+    const h0 = localHour();
+    // Au départ, chacun est là où il était 1 h 30 plus tôt ; les trajets en cours seront
+    // reconstitués (antidatés) dès les premières images.
+    for (let i = 0; i < A; i++) { ag.loc[i] = wanted(i, (h0 - 1.5 + 24) % 24); if (ag.loc[i] !== wanted(i, h0) && sinceChange(i, h0) > 1.5) ag.loc[i] = wanted(i, h0); }
+
+    // ---- 5. Itinéraires (A* avec tas binaire)
+    const gScore = new Float64Array(M), came = new Int32Array(M), stamp = new Int32Array(M); let curStamp = 0;
+    const heapN = new Int32Array(E + M + 16), heapF = new Float64Array(E + M + 16);
+    function route(s, t, carMode){
+      if (s === t) return [s];
+      curStamp++; let hs = 0;
+      const push = (n, f) => { let i = hs++; while (i > 0) { const p = (i - 1) >> 1; if (heapF[p] <= f) break; heapN[i] = heapN[p]; heapF[i] = heapF[p]; i = p; } heapN[i] = n; heapF[i] = f; };
+      const pop = () => { const top = heapN[0]; const n = heapN[--hs], f = heapF[hs]; let i = 0; for (;;) { let c = 2 * i + 1; if (c >= hs) break; if (c + 1 < hs && heapF[c + 1] < heapF[c]) c++; if (heapF[c] >= f) break; heapN[i] = heapN[c]; heapF[i] = heapF[c]; i = c; } heapN[i] = n; heapF[i] = f; return top; };
+      const want = carMode ? 1 : 2;
+      stamp[s] = curStamp; gScore[s] = 0; came[s] = -1; push(s, 0);
+      let it = 0;
+      while (hs > 0 && it++ < 60000) {
+        const u = pop();
+        if (u === t) break;
+        const gu = gScore[u];
+        for (let k = off[u]; k < off[u + 1]; k++) {
+          if (!(mode[k] & want)) continue;
+          const v = to[k]; const g = gu + len[k];
+          if (stamp[v] !== curStamp || g < gScore[v]) {
+            stamp[v] = curStamp; gScore[v] = g; came[v] = u;
+            push(v, g + 1.6 * Math.hypot(X[v] - X[t], Y[v] - Y[t]));   // A* pondéré : bien plus rapide, trajets quasi optimaux
+          }
+        }
+      }
+      if (stamp[t] !== curStamp) return null;
+      const path = []; for (let v = t; v !== -1; v = came[v]) path.push(v);
+      return path.reverse();
+    }
+    function startTrip(i, dest, simMs, since){
+      const from = places[ag.loc[i]], toP = places[dest];
+      let car = !!ag.car[i];
+      // Déjà arrivé depuis longtemps ? Inutile de calculer l'itinéraire.
+      const crow = Math.hypot(toP.x - from.x, toP.y - from.y) * 1.25 + 30;
+      if ((since || 0) * 3600 * (car ? 12 : 1.6) > crow * 1.3) { ag.loc[i] = dest; return; }
+      let path = car ? route(from.carNode, toP.carNode, true) : route(from.node, toP.node, false);
+      if (!path && car) { car = false; path = route(from.node, toP.node, false); }
+      if (!path) { ag.loc[i] = dest; return; }
+      // Polyligne : sortie du bâtiment → rues → entrée du bâtiment, avec décalage côté droit
+      const side = car ? 1.6 : 4.5;
+      const px = [from.x], py = [from.y];
+      for (let k = 0; k < path.length; k++) {
+        const n = path[k], a = path[Math.max(k - 1, 0)], b = path[Math.min(k + 1, path.length - 1)];
+        let dx = X[b] - X[a], dy = Y[b] - Y[a]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+        px.push(X[n] + dy * side); py.push(Y[n] - dx * side);
+      }
+      px.push(toP.x); py.push(toP.y);
+      const cum = new Float32Array(px.length); for (let k = 1; k < px.length; k++) cum[k] = cum[k - 1] + Math.hypot(px[k] - px[k - 1], py[k] - py[k - 1]);
+      const speed = car ? rnd(7, 12) : rnd(1.1, 1.6);          // m/s (ville, arrêts compris)
+      const total = cum[cum.length - 1];
+      // Départ antidaté : l'habitant est déjà en chemin depuis « since » heures
+      let back = Math.max(0, since || 0) * 3600e3;
+      if (back / 1000 * speed >= total) { ag.loc[i] = dest; return; }
+      ag.trip[i] = { px, py, cum, total, speed, t0: simMs - back, dest, car, seg: 1 };
+    }
+
+    // ---- 6. Mise à jour à chaque image
+    const budgetMs = MOBILE ? 3 : 6, bornAt = performance.now();
+    let scan = 0;
+    function update(){
+      const simMs = clock.t, h = localHour();
+      const tStart = performance.now();
+      // a) départs (on balaie une partie de la population à chaque image, dans la limite du budget)
+      const step = Math.min(A, MOBILE ? 1500 : 4000);
+      for (let c = 0; c < step; c++) {
+        const i = scan; scan = (scan + 1) % A;
+        if (ag.trip[i]) continue;
+        const w = wanted(i, h);
+        if (w !== ag.loc[i]) {
+          // budget de calcul par image (plus large juste après la génération pour peupler les rues)
+          if (performance.now() - tStart > (performance.now() - bornAt < 4000 ? budgetMs * 3 : budgetMs)) break;
+          startTrip(i, w, simMs, sinceChange(i, h));
+        }
+      }
+      // b) positions
+      for (let i = 0; i < A; i++) {
+        const T = ag.trip[i];
+        if (T) {
+          const d = (simMs - T.t0) / 1000 * T.speed;
+          if (d >= T.total || simMs < T.t0) { ag.loc[i] = T.dest; ag.trip[i] = null; }
+          else {
+            let s = T.seg; while (s < T.cum.length - 1 && T.cum[s] < d) s++; T.seg = s;
+            const f = (d - T.cum[s - 1]) / ((T.cum[s] - T.cum[s - 1]) || 1);
+            ag.x[i] = T.px[s - 1] + (T.px[s] - T.px[s - 1]) * f;
+            ag.y[i] = T.py[s - 1] + (T.py[s] - T.py[s - 1]) * f;
+            ag.kind[i] = T.car ? 2 : 1;
+            continue;
+          }
+        }
+        const p = places[ag.loc[i]];
+        ag.x[i] = p.x + ag.jx[i] * p.r; ag.y[i] = p.y + ag.jy[i] * p.r; ag.kind[i] = 0;
+      }
+    }
+
+    city = { ready: true, lng0, lat0, half: HALF, mx0, my0, WM, ag, agents: A, ratio, update, built: performance.now() };
+    cityLayer.setCity(city);
+    cityBuilding = false;
+    console.info(`Ville générée : ${M} nœuds, ${B.length} bâtiments, ${P.length} lieux, ${A} habitants (1 pour ${ratio}) en ${Math.round(performance.now() - t0)} ms`);
+    showPopLine();
+  }
+
+  const cityLayer = {
+    id: 'habitants', type: 'custom', renderingMode: '2d', programs: {}, fade: 0,
+    onAdd(m, gl){ this.gl = gl; this.buf = gl.createBuffer(); this.kbuf = gl.createBuffer(); },
+    setCity(c){
+      this.c = c; this.pos = new Float32Array(c.agents * 2);
+      const gl = this.gl;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf); gl.bufferData(gl.ARRAY_BUFFER, this.pos.byteLength, gl.DYNAMIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.kbuf); gl.bufferData(gl.ARRAY_BUFFER, c.agents * 4, gl.DYNAMIC_DRAW);
+    },
+    program(gl, sd){
+      let p = this.programs[sd.variantName];
+      if (!p) p = this.programs[sd.variantName] = compile(gl, `#version 300 es
+        ${sd.vertexShaderPrelude}
+        ${sd.define}
+        in vec2 a_pos; in float a_kind;
+        uniform vec3 u_sun; uniform float u_size; uniform float u_alpha;
+        out float v_night; out float v_a; out float v_kind;
+        ${GLSL_GEO}
+        void main(){
+          gl_Position = projectTile(a_pos);
+          v_night = smoothstep(0.04, -0.12, dot(mercToNormal(a_pos), u_sun));
+          v_kind = a_kind;
+          v_a = u_alpha * (a_kind < 0.5 ? 0.6 : 1.0);
+          gl_PointSize = u_size * (a_kind > 1.5 ? 1.45 : a_kind > 0.5 ? 1.15 : 0.62);
+        }`, DOT_FS);
+      return p;
+    },
+    render(gl, a){
+      const c = this.c; if (!c || this.fade <= 0.01 || !popLayer.visible) return;
+      const ag = c.ag, n = c.agents, pos = this.pos;
+      for (let i = 0; i < n; i++) { pos[2 * i] = c.mx0 + ag.x[i] / c.WM; pos[2 * i + 1] = c.my0 - ag.y[i] / c.WM; }
+      const z = map.getZoom(), pr = map.getPixelRatio();
+      const p = this.program(gl, a.shaderData);
+      gl.useProgram(p); setProjection(gl, p, a.defaultProjectionData);
+      gl.uniform3f(p.u('u_sun'), ...(popLayer.sun || sunDir(clock.t)));
+      gl.uniform1f(p.u('u_size'), Math.min(Math.max(5.2 + (z - 14) * 2.0, 4.2), 13) * pr);
+      gl.uniform1f(p.u('u_alpha'), this.fade);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.DEPTH_TEST);
+      const l1 = gl.getAttribLocation(p, 'a_pos'), l2 = gl.getAttribLocation(p, 'a_kind');
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, pos);
+      gl.enableVertexAttribArray(l1); gl.vertexAttribPointer(l1, 2, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.kbuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, ag.kind);
+      gl.enableVertexAttribArray(l2); gl.vertexAttribPointer(l2, 1, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.POINTS, 0, n);
+      gl.disableVertexAttribArray(l1); gl.disableVertexAttribArray(l2);
+    }
+  };
+
+  // Faut-il (re)générer la ville ? (zoom suffisant et centre sorti de la zone simulée)
+  function checkCity(){
+    const z = map.getZoom();
+    if (z < CITY_ZOOM - 1) { if (city) { city = null; cityLayer.c = null; showPopLine(); } return; }
+    if (z < CITY_ZOOM) return;
+    const c = map.getCenter();
+    if (city) {
+      const dx = (c.lng - city.lng0) * 111320 * Math.cos(c.lat * Math.PI / 180), dy = (c.lat - city.lat0) * 110574;
+      if (Math.abs(dx) < city.half * 0.45 && Math.abs(dy) < city.half * 0.45) return;
+    }
+    buildCity();
+  }
+  // On vérifie régulièrement (l'évènement « idle » peut tarder quand le relief se charge)
+  setInterval(() => {
+    if (!map.isMoving() && map.getZoom() >= CITY_ZOOM - 1 && (() => { try { return map.isSourceLoaded('omt'); } catch (e) { return false; } })()) checkCity();
+    else if (map.getZoom() < CITY_ZOOM - 1) checkCity();
+  }, 1200);
+
 
   // Rafraîchissement : continu quand ça bouge à l'écran, sinon 1 fois par seconde (économie de batterie)
   let lastSlow = 0;
@@ -621,7 +1042,13 @@
     tickClock();
     const sun = sunDir(clock.t);
     nightLayer.sun = sun; popLayer.sun = sun;
-    const live = clock.speed >= 60 || map.getZoom() >= 11;
+    const z = map.getZoom();
+    // Fondu planète ↔ ville
+    const cf = city ? Math.min(Math.max((z - CITY_ZOOM) / 0.5, 0), 1) : 0;
+    if ((cf > 0.5) !== (cityLayer.fade > 0.5)) setTimeout(showPopLine, 0);
+    cityLayer.fade = cf; popLayer.fade = 1 - cf;
+    if (city && cf > 0) city.update();
+    const live = clock.speed >= 60 || z >= 11;
     if (live || now - lastSlow > 1000) {
       if (!live) lastSlow = now;
       if (!map.isMoving()) map.triggerRepaint();
