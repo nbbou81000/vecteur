@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>Vecteur — Prototype · Le globe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+<style>
+  :root{
+    --panel: rgba(14,17,22,.58);
+    --panel-strong: rgba(14,17,22,.78);
+    --line: rgba(255,255,255,.09);
+    --text: #eef1f4;
+    --muted: #9aa4af;
+    --accent: #e3b778;
+    --safe-t: env(safe-area-inset-top,0px);
+    --safe-b: env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+  #space{position:fixed;inset:-10%;background:#000 center/1400px repeat;will-change:background-position}
+  #map{position:fixed;inset:0}
+  .maplibregl-canvas{outline:none}
+
+  /* ---------- Panneaux ---------- */
+  .glass{background:var(--panel);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  #top{position:fixed;left:0;right:0;top:calc(12px + var(--safe-t));display:flex;gap:12px;align-items:flex-start;padding:0 14px;pointer-events:none;z-index:5}
+  #top > *{pointer-events:auto}
+  #brand{padding:10px 16px;display:flex;flex-direction:column;justify-content:center;min-height:48px}
+  #brand b{font-family:"Barlow Condensed";font-weight:700;letter-spacing:.32em;font-size:20px;line-height:1}
+  #brand span{font-size:10.5px;color:var(--muted);letter-spacing:.08em;margin-top:4px;text-transform:uppercase}
+  #searchWrap{flex:1;max-width:520px;position:relative;margin:0 auto}
+  #search{display:flex;align-items:center;gap:10px;padding:0 14px;height:48px}
+  #search svg{flex:none;opacity:.7}
+  #q{flex:1;background:none;border:0;outline:0;color:var(--text);font:500 15px Inter,sans-serif;min-width:0}
+  #q::placeholder{color:var(--muted)}
+  #results{position:absolute;left:0;right:0;top:56px;padding:6px;display:none;max-height:50vh;overflow:auto}
+  #results.show{display:block}
+  .res{padding:10px 12px;border-radius:9px;cursor:pointer;font-size:14px;line-height:1.35}
+  .res small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+  .res:hover,.res.sel{background:rgba(255,255,255,.07)}
+
+  #dest{position:fixed;left:14px;right:14px;top:calc(72px + var(--safe-t));display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;z-index:4;justify-content:center}
+  #dest::-webkit-scrollbar{display:none}
+  .chip{flex:none;padding:8px 13px;font-size:12.5px;font-weight:500;color:var(--text);cursor:pointer;border-radius:999px;white-space:nowrap;transition:background .2s,border-color .2s}
+  .chip:hover{background:var(--panel-strong);border-color:rgba(227,183,120,.45)}
+
+  /* ---------- Barre du bas ---------- */
+  #bottom{position:fixed;left:0;right:0;bottom:calc(14px + var(--safe-b));display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:0 14px;pointer-events:none;z-index:5}
+  #bottom > *{pointer-events:auto}
+  #readout{padding:12px 16px;min-width:210px}
+  #scaleName{font-family:"Barlow Condensed";font-weight:600;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent)}
+  #alt{font-family:"Barlow Condensed";font-weight:600;font-size:30px;line-height:1.05;margin-top:2px;font-variant-numeric:tabular-nums}
+  #alt small{font-size:15px;color:var(--muted);margin-left:4px;letter-spacing:.05em}
+  #coords{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:3px;letter-spacing:.02em}
+  #tools{display:flex;gap:6px;padding:6px}
+  .tool{width:46px;height:46px;border:0;border-radius:10px;background:transparent;color:var(--text);display:grid;place-items:center;cursor:pointer;position:relative;transition:background .2s}
+  .tool:hover{background:rgba(255,255,255,.07)}
+  .tool.on{background:rgba(227,183,120,.16);color:var(--accent)}
+  .tool svg{width:22px;height:22px}
+  .tool[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:54px;left:50%;transform:translateX(-50%);background:var(--panel-strong);border:1px solid var(--line);padding:5px 9px;border-radius:7px;font-size:11.5px;white-space:nowrap;color:var(--text)}
+  #compass svg{transition:transform .1s linear}
+
+  /* ---------- Attribution ---------- */
+  .maplibregl-ctrl-bottom-right{bottom:calc(84px + var(--safe-b))!important}
+  .maplibregl-ctrl-attrib{background:rgba(14,17,22,.6)!important;color:var(--muted)!important;font-size:10px}
+  .maplibregl-ctrl-attrib a{color:#c9d1d9!important}
+  .maplibregl-ctrl-attrib-button{filter:invert(1)}
+
+  /* ---------- Écran de chargement ---------- */
+  #splash{position:fixed;inset:0;background:radial-gradient(ellipse at center,#0d1520 0%,#000 70%);display:grid;place-items:center;z-index:20;transition:opacity 1.2s ease}
+  #splash.hide{opacity:0;pointer-events:none}
+  #splash div{text-align:center}
+  #splash b{font-family:"Barlow Condensed";font-weight:700;font-size:44px;letter-spacing:.5em;padding-left:.5em;display:block}
+  #splash span{display:block;color:var(--muted);font-size:12px;letter-spacing:.22em;text-transform:uppercase;margin-top:14px}
+  #splash i{display:block;width:160px;height:2px;margin:26px auto 0;background:linear-gradient(90deg,transparent,var(--accent),transparent);background-size:200% 100%;animation:load 1.6s linear infinite}
+  @keyframes load{from{background-position:200% 0}to{background-position:-200% 0}}
+
+  /* ---------- Mobile ---------- */
+  @media (max-width:720px){
+    #top{flex-direction:column;gap:8px}
+    #brand{display:none}
+    #searchWrap{width:100%;max-width:none}
+    #search{height:46px}
+    #dest{top:calc(66px + var(--safe-t));justify-content:flex-start}
+    #bottom{flex-direction:column;align-items:stretch}
+    #readout{display:flex;align-items:baseline;gap:12px;padding:10px 14px;min-width:0}
+    #alt{font-size:24px;margin:0}
+    #coords{margin:0 0 0 auto}
+    #tools{justify-content:space-between}
+    .tool{flex:1}
+    .tool[data-tip]:hover::after{display:none}
+    .maplibregl-ctrl-bottom-right{bottom:calc(150px + var(--safe-b))!important}
+  }
+</style>
+</head>
+<body>
+<div id="space"></div>
+<div id="map"></div>
+
+<div id="splash"><div><b>VECTEUR</b><span>Chargement de la planète</span><i></i></div></div>
+
+<div id="top">
+  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 1 — Le globe</span></div>
+  <div id="searchWrap">
+    <div id="search" class="glass">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Rechercher une ville, un lieu, une adresse…" autocomplete="off" enterkeyhint="search">
+    </div>
+    <div id="results" class="glass"></div>
+  </div>
+</div>
+
+<div id="dest"></div>
+
+<div id="bottom">
+  <div id="readout" class="glass">
+    <div id="scaleName">Planète</div>
+    <div id="alt">—</div>
+    <div id="coords">—</div>
+  </div>
+  <div id="tools" class="glass">
+    <button class="tool" id="bHome" data-tip="Vue planète" aria-label="Vue planète">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg>
+    </button>
+    <button class="tool" id="bTilt" data-tip="Vue inclinée 3D" aria-label="Vue inclinée">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 18 9 9l4 5 3-3 5 7z"/><circle cx="17" cy="6" r="2"/></svg>
+    </button>
+    <button class="tool on" id="bTerrain" data-tip="Relief" aria-label="Relief">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 20h20L15 7l-4 7-2-3z"/></svg>
+    </button>
+    <button class="tool on" id="bBuild" data-tip="Bâtiments 3D" aria-label="Bâtiments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 21V9l5-3v15M9 21V3l7 3v15M16 21v-9l4 2v7M2 21h20"/></svg>
+    </button>
+    <button class="tool on" id="bSpin" data-tip="Rotation automatique" aria-label="Rotation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
+    </button>
+    <button class="tool" id="compass" data-tip="Remettre le nord en haut" aria-label="Nord">
+      <svg viewBox="0 0 24 24"><path d="M12 3 15 12H9z" fill="#e3b778"/><path d="M12 21 9 12h6z" fill="#8a939c"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ============ Ciel étoilé (généré une seule fois) ============ */
+  (function stars(){
+    const c = document.createElement('canvas'); c.width = c.height = 1400;
+    const g = c.getContext('2d');
+    for (let i = 0; i < 1600; i++) {
+      const x = Math.random()*1400, y = Math.random()*1400;
+      const r = Math.random() < .97 ? Math.random()*.9 + .2 : Math.random()*1.4 + .9;
+      const a = Math.random()*.7 + .15;
+      const tint = Math.random();
+      const col = tint < .15 ? '255,214,170' : tint < .3 ? '180,205,255' : '255,255,255';
+      g.fillStyle = `rgba(${col},${a})`;
+      g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill();
+    }
+    document.getElementById('space').style.backgroundImage = `url(${c.toDataURL()})`;
+  })();
+
+  /* ============ Style de la carte ============ */
+  const NAME = ['coalesce', ['get','name:fr'], ['get','name_int'], ['get','name']];
+  const HALO = { 'text-halo-color':'rgba(0,0,0,.65)', 'text-halo-width':1.3, 'text-halo-blur':.8 };
+
+  const STYLE = {
+    version: 8,
+    projection: { type: 'globe' },
+    glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+    sky: {
+      'sky-color': '#2f6fb8',
+      'horizon-color': '#cfe3f7',
+      'fog-color': '#d9e6f2',
+      'sky-horizon-blend': .55,
+      'horizon-fog-blend': .65,
+      'fog-ground-blend': .9,
+      'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 5, 1, 8, 0]
+    },
+    sources: {
+      satellite: {
+        type: 'raster',
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        tileSize: 256, maxzoom: 19,
+        attribution: 'Imagerie © Esri, Maxar, Earthstar Geographics'
+      },
+      terrain: {
+        type: 'raster-dem', encoding: 'terrarium',
+        tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+        tileSize: 256, maxzoom: 15,
+        attribution: 'Relief © Mapzen, AWS Terrain Tiles'
+      },
+      hillshadeSrc: {
+        type: 'raster-dem', encoding: 'terrarium',
+        tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+        tileSize: 256, maxzoom: 12
+      },
+      omt: {
+        type: 'vector',
+        url: 'https://tiles.openfreemap.org/planet',
+        attribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> © OpenMapTiles © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+      }
+    },
+    layers: [
+      { id:'satellite', type:'raster', source:'satellite',
+        paint:{ 'raster-fade-duration':250, 'raster-contrast':.06, 'raster-saturation':.06, 'raster-brightness-max':.97 } },
+
+      { id:'hillshade', type:'hillshade', source:'hillshadeSrc', maxzoom:13,
+        paint:{ 'hillshade-exaggeration':.18, 'hillshade-shadow-color':'rgba(0,0,0,.55)',
+                'hillshade-highlight-color':'rgba(255,255,255,.06)', 'hillshade-accent-color':'rgba(0,0,0,0)' } },
+
+      { id:'boundary-state', type:'line', source:'omt', 'source-layer':'boundary', minzoom:4,
+        filter:['all', ['==',['get','admin_level'],4], ['!=',['get','maritime'],1]],
+        paint:{ 'line-color':'rgba(255,255,255,.22)', 'line-width':.7, 'line-dasharray':[3,2] } },
+
+      { id:'boundary-country', type:'line', source:'omt', 'source-layer':'boundary',
+        filter:['all', ['==',['get','admin_level'],2], ['!=',['get','maritime'],1]],
+        layout:{ 'line-join':'round' },
+        paint:{ 'line-color':'rgba(255,255,255,.5)',
+                'line-width':['interpolate',['linear'],['zoom'],1,.4,6,1.3,10,2] } },
+
+      { id:'roads-minor', type:'line', source:'omt', 'source-layer':'transportation', minzoom:12,
+        filter:['match',['get','class'],['secondary','tertiary','minor','service'],true,false],
+        layout:{ 'line-cap':'round','line-join':'round' },
+        paint:{ 'line-color':'rgba(255,255,255,.38)',
+                'line-width':['interpolate',['exponential',1.6],['zoom'],12,.3,16,2,19,7],
+                'line-opacity':['interpolate',['linear'],['zoom'],12,0,13.5,1] } },
+
+      { id:'roads-major', type:'line', source:'omt', 'source-layer':'transportation', minzoom:7,
+        filter:['match',['get','class'],['motorway','trunk','primary'],true,false],
+        layout:{ 'line-cap':'round','line-join':'round' },
+        paint:{ 'line-color':'rgba(255,224,160,.6)',
+                'line-width':['interpolate',['exponential',1.6],['zoom'],7,.4,12,1.6,16,4,19,12],
+                'line-opacity':['interpolate',['linear'],['zoom'],7,0,9,1] } },
+
+      { id:'buildings-3d', type:'fill-extrusion', source:'omt', 'source-layer':'building', minzoom:14,
+        paint:{
+          'fill-extrusion-color':['interpolate',['linear'],['coalesce',['get','render_height'],0],
+              0,'#d8d2c8', 30,'#cfd3d6', 120,'#bcc6cf', 300,'#a9b8c6'],
+          'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,15.5,['coalesce',['get','render_height'],8]],
+          'fill-extrusion-base':['coalesce',['get','render_min_height'],0],
+          'fill-extrusion-opacity':.9,
+          'fill-extrusion-vertical-gradient':true } },
+
+      { id:'label-road', type:'symbol', source:'omt', 'source-layer':'transportation_name', minzoom:15,
+        layout:{ 'symbol-placement':'line', 'text-field':NAME, 'text-font':['Noto Sans Regular'],
+                 'text-size':11.5, 'text-letter-spacing':.03 },
+        paint:{ 'text-color':'rgba(255,255,255,.92)', ...HALO } },
+
+      { id:'label-suburb', type:'symbol', source:'omt', 'source-layer':'place', minzoom:12, maxzoom:17,
+        filter:['match',['get','class'],['suburb','quarter','neighbourhood'],true,false],
+        layout:{ 'text-field':NAME, 'text-font':['Noto Sans Regular'], 'text-size':12,
+                 'text-transform':'uppercase', 'text-letter-spacing':.12, 'text-max-width':7 },
+        paint:{ 'text-color':'rgba(255,255,255,.8)', ...HALO } },
+
+      { id:'label-town', type:'symbol', source:'omt', 'source-layer':'place', minzoom:8.5, maxzoom:15,
+        filter:['match',['get','class'],['town','village'],true,false],
+        layout:{ 'text-field':NAME, 'text-font':['Noto Sans Regular'],
+                 'text-size':['interpolate',['linear'],['zoom'],9,11,14,15], 'symbol-sort-key':['get','rank'] },
+        paint:{ 'text-color':'#ffffff', ...HALO } },
+
+      { id:'label-city', type:'symbol', source:'omt', 'source-layer':'place', minzoom:3.5, maxzoom:14,
+        filter:['==',['get','class'],'city'],
+        layout:{ 'text-field':NAME, 'text-font':['Noto Sans Bold'],
+                 'text-size':['interpolate',['linear'],['zoom'],4,11,8,15,12,19],
+                 'symbol-sort-key':['get','rank'], 'text-max-width':8 },
+        paint:{ 'text-color':'#ffffff', ...HALO } },
+
+      { id:'label-country', type:'symbol', source:'omt', 'source-layer':'place', maxzoom:7,
+        filter:['==',['get','class'],'country'],
+        layout:{ 'text-field':NAME, 'text-font':['Noto Sans Bold'],
+                 'text-size':['interpolate',['linear'],['zoom'],1,9,3,12,6,17],
+                 'text-transform':'uppercase', 'text-letter-spacing':.18, 'text-max-width':7,
+                 'symbol-sort-key':['get','rank'] },
+        paint:{ 'text-color':'rgba(255,255,255,.88)', ...HALO } }
+    ]
+  };
+
+  /* ============ Carte ============ */
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: STYLE,
+    center: [10, 30],
+    zoom: window.innerWidth < 720 ? 1.15 : 1.7,
+    maxPitch: 85,
+    attributionControl: false,
+    antialias: true,
+    canvasContextAttributes: { antialias: true }
+  });
+  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+
+  const $ = id => document.getElementById(id);
+  let terrainOn = true;
+
+  map.on('load', () => {
+    try { map.setTerrain({ source: 'terrain', exaggeration: 1.25 }); } catch (e) { terrainOn = false; $('bTerrain').classList.remove('on'); }
+    map.once('idle', hideSplash);
+    setTimeout(hideSplash, 7000);
+    updateHud();
+    spin();
+  });
+  map.on('error', e => console.warn('Carte :', e && e.error ? e.error.message : e));
+
+  function hideSplash(){ $('splash').classList.add('hide'); }
+
+  /* ============ Rotation automatique ============ */
+  let spinOn = true, busy = false, busyTimer = null;
+  function spin(){
+    if (!spinOn || busy || map.getZoom() > 5 || map.isMoving()) return;
+    const c = map.getCenter();
+    c.lng -= 3.5;
+    map.easeTo({ center: c, duration: 1000, easing: t => t });
+  }
+  function pauseSpin(ms = 8000){
+    busy = true;
+    clearTimeout(busyTimer);
+    busyTimer = setTimeout(function retry(){
+      if (map.isMoving()) { busyTimer = setTimeout(retry, 1500); return; }
+      busy = false; spin();
+    }, ms);
+  }
+  map.on('moveend', spin);
+  ['mousedown','touchstart','wheel','dragstart','pitchstart'].forEach(ev =>
+    map.on(ev, e => { if (e.originalEvent) { map.stop(); pauseSpin(); } }));
+
+  /* ============ Lecture altitude / échelle / coordonnées ============ */
+  const SCALES = [[2.5,'Planète'],[4.5,'Continent'],[6.5,'Pays'],[9,'Région'],[12,'Ville'],[15,'Quartier'],[99,'Rue']];
+  let raf = 0;
+  map.on('move', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; updateHud(); }); });
+
+  function updateHud(){
+    const z = map.getZoom(), c = map.getCenter();
+    $('scaleName').textContent = SCALES.find(s => z < s[0])[1];
+    const mpp = 40075016.686 * Math.cos(c.lat * Math.PI / 180) / (512 * Math.pow(2, z));
+    let alt = mpp * map.getContainer().clientHeight / 2 / Math.tan(0.3217);
+    alt *= Math.cos(map.getPitch() * Math.PI / 180) * .6 + .4;
+    $('alt').innerHTML = alt >= 10000
+      ? `${Math.round(alt / 1000).toLocaleString('fr-FR')}<small>km</small>`
+      : alt >= 1000 ? `${(alt / 1000).toFixed(1).replace('.', ',')}<small>km</small>`
+      : `${Math.round(alt).toLocaleString('fr-FR')}<small>m</small>`;
+    const lat = `${Math.abs(c.lat).toFixed(4)}° ${c.lat >= 0 ? 'N' : 'S'}`;
+    const lng = `${Math.abs(c.lng).toFixed(4)}° ${c.lng >= 0 ? 'E' : 'O'}`;
+    $('coords').textContent = `${lat}  ·  ${lng}`;
+    $('compass').querySelector('svg').style.transform = `rotate(${-map.getBearing()}deg)`;
+    $('bTilt').classList.toggle('on', map.getPitch() > 20);
+    // Léger parallaxe du ciel étoilé
+    $('space').style.backgroundPosition = `${(-c.lng * 4).toFixed(1)}px ${(c.lat * 3).toFixed(1)}px`;
+  }
+
+  /* ============ Déplacements ============ */
+  function goTo(opt){
+    pauseSpin(12000);
+    map.flyTo(Object.assign({ duration: 6000, curve: 1.5, essential: true }, opt));
+  }
+
+  const DESTS = [
+    ['Albi',          [2.1430, 43.9286], 15.6,  62, -25],
+    ['Paris',         [2.2945, 48.8584], 16,    65,  40],
+    ['New York',      [-73.9857, 40.7484], 15.6, 65, 30],
+    ['Tokyo',         [139.7671, 35.6812], 15.4, 60, -20],
+    ['Mont-Blanc',    [6.8652, 45.8326], 12.6,  74, 150],
+    ['Rio de Janeiro',[-43.2105,-22.9519], 13.8, 72, 160],
+    ['Le Caire',      [31.1342, 29.9792], 15.2, 60, 20],
+    ['Sydney',        [151.2153,-33.8568], 15.6, 62, -40],
+    ['Himalaya',      [86.9250, 27.9881], 11.8, 75, 200]
+  ];
+  const dest = $('dest');
+  DESTS.forEach(([name, center, zoom, pitch, bearing]) => {
+    const b = document.createElement('button');
+    b.className = 'chip glass'; b.textContent = name;
+    b.onclick = () => goTo({ center, zoom, pitch, bearing });
+    dest.appendChild(b);
+  });
+
+  $('bHome').onclick = () => goTo({ center: [map.getCenter().lng, 20], zoom: window.innerWidth < 720 ? 1.15 : 1.7, pitch: 0, bearing: 0, duration: 4500 });
+  $('bTilt').onclick = () => { pauseSpin(); map.easeTo({ pitch: map.getPitch() > 20 ? 0 : 62, duration: 1400 }); };
+  $('compass').onclick = () => { pauseSpin(); map.easeTo({ bearing: 0, duration: 900 }); };
+  $('bTerrain').onclick = () => {
+    terrainOn = !terrainOn;
+    try { map.setTerrain(terrainOn ? { source: 'terrain', exaggeration: 1.25 } : null); } catch (e) {}
+    $('bTerrain').classList.toggle('on', terrainOn);
+  };
+  $('bBuild').onclick = () => {
+    const v = map.getLayoutProperty('buildings-3d', 'visibility') === 'none' ? 'visible' : 'none';
+    map.setLayoutProperty('buildings-3d', 'visibility', v);
+    $('bBuild').classList.toggle('on', v === 'visible');
+  };
+  $('bSpin').onclick = () => {
+    spinOn = !spinOn; $('bSpin').classList.toggle('on', spinOn);
+    if (spinOn) { busy = false; spin(); } else map.stop();
+  };
+
+  /* ============ Recherche de lieux (Nominatim / OpenStreetMap) ============ */
+  const q = $('q'), results = $('results');
+  let tq = null, items = [], sel = -1, ctrl = null;
+
+  q.addEventListener('input', () => {
+    clearTimeout(tq);
+    const v = q.value.trim();
+    if (v.length < 2) { results.classList.remove('show'); return; }
+    tq = setTimeout(() => search(v), 450);
+  });
+  q.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!items.length) return;
+      e.preventDefault();
+      sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      [...results.children].forEach((el, i) => el.classList.toggle('sel', i === sel));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (items.length) pick(items[Math.max(sel, 0)]);
+      else if (q.value.trim()) search(q.value.trim(), true);
+    } else if (e.key === 'Escape') { results.classList.remove('show'); q.blur(); }
+  });
+  document.addEventListener('pointerdown', e => { if (!$('searchWrap').contains(e.target)) results.classList.remove('show'); });
+
+  async function search(v, autoPick){
+    if (ctrl) ctrl.abort();
+    ctrl = new AbortController();
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=fr&q=${encodeURIComponent(v)}`;
+      const r = await fetch(url, { signal: ctrl.signal });
+      items = await r.json(); sel = -1;
+      if (autoPick && items.length) return pick(items[0]);
+      results.innerHTML = items.length ? '' : '<div class="res"><small>Aucun résultat</small></div>';
+      items.forEach((it, i) => {
+        const parts = it.display_name.split(', ');
+        const d = document.createElement('div');
+        d.className = 'res';
+        d.innerHTML = `${esc(parts[0])}<small>${esc(parts.slice(1, 4).join(', '))}</small>`;
+        d.onclick = () => pick(it);
+        results.appendChild(d);
+      });
+      results.classList.add('show');
+    } catch (e) {
+      if (e.name !== 'AbortError') { results.innerHTML = '<div class="res"><small>Recherche indisponible</small></div>'; results.classList.add('show'); }
+    }
+  }
+  function pick(it){
+    results.classList.remove('show'); q.blur();
+    q.value = it.display_name.split(', ')[0];
+    const [s, n, w, e] = it.boundingbox.map(Number);
+    const cam = map.cameraForBounds([[w, s], [e, n]], { padding: 80, maxZoom: 16.5 }) || { center: [+it.lon, +it.lat], zoom: 14 };
+    const z = Math.min(cam.zoom, 16.5);
+    goTo({ center: cam.center, zoom: z, pitch: z > 11 ? 60 : z > 7 ? 35 : 0, bearing: z > 11 ? -20 : 0 });
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c])); }
+})();
+</script>
+</body>
+</html>
