@@ -29,6 +29,10 @@ let worldPop = 0, worldGdp = 0;
 let game = { mode: 'campagne', goal: 'infection', noResponse: false, noCure: false, research: 1 };
 let evo = { r0: 1, lethal: 0, severity: 0, stealth: 0, cold: 0, heat: 0, drug: 0, cureSlow: 0, air: 0, water: 0, vector: 0, animal: 0, blood: 0 };
 let who = false, cure = 0, cureDone = false, cureDay = 0, infCountries = 0;
+// Cellule simulée personne par personne par la ville (le moteur mondial ne la simule plus lui-même)
+let ctrl = { cell: -1, until: 0 }, extImports = 0;
+// Foyer de chaque cellule : centre (0..1 dans la cellule) ; le rayon grandit avec le nombre de cas
+let fcx, fcy, tex2;
 
 /* ---------- Aléatoire ---------- */
 function poisson(l){
@@ -37,6 +41,13 @@ function poisson(l){
   const L = Math.exp(-l); let k = 0, p = 1;
   do { k++; p *= Math.random(); } while (p > L);
   return k - 1;
+}
+// Loi gamma (Marsaglia-Tsang) : sert à la super-propagation (contagiosité très inégale)
+function gamma(k){
+  if (k < 1) return gamma(k + 1) * Math.pow(Math.random() || 1e-12, 1 / k);
+  const d = k - 1 / 3, c = 1 / Math.sqrt(9 * d);
+  for (;;) { let x, v; do { x = gauss(); v = 1 + c * x; } while (v <= 0); v = v * v * v; const u = Math.random();
+    if (u < 1 - 0.0331 * x ** 4 || Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v; }
 }
 function gauss(){ let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 function draw(count, p){
@@ -103,7 +114,8 @@ async function init(base, ppd){
   routeOff[A] = rt.length; routeTo = Int32Array.from(rt); routeCum = Float64Array.from(rc);
   self.airNames = air.airports.map(a => a[1]);
   isActive = new Uint8Array(n); wasActive = new Uint8Array(n);
-  tex = new Uint8Array(W * H * 4);
+  tex = new Uint8Array(W * H * 4); tex2 = new Uint8Array(W * H * 4);
+  fcx = new Float32Array(n).fill(0.5); fcy = new Float32Array(n).fill(0.5);
   postMessage({ type: 'ready', cells: n, airports: A, routes: rt.length, countries: CN });
 }
 
@@ -127,9 +139,25 @@ function updateEnv(force){
             * (1 + 0.12 * evo.blood) * (1 + 0.1 * evo.air);
   }
 }
-function activate(i){
+function setFocus(i, lon, lat){
+  fcx[i] = Math.min(0.98, Math.max(0.02, (lon + 180) * 4 - (cellIdx[i] % W)));
+  fcy[i] = Math.min(0.98, Math.max(0.02, (90 - lat) * 4 - Math.floor(cellIdx[i] / W)));
+}
+// Une cellule touchée par ses voisines : le foyer démarre du côté de la voisine la plus contagieuse
+function focusFromNeighbors(j){
+  let best = -1, bi = 0;
+  for (let k = nbOff[j]; k < nbOff[j + 1]; k++) { const v = nbIdx[k]; if (I[v] > bi) { bi = I[v]; best = v; } }
+  if (best < 0) return;
+  let dc = (cellIdx[best] % W) - (cellIdx[j] % W); if (dc > 1) dc = -1; if (dc < -1) dc = 1;
+  const dr = Math.floor(cellIdx[best] / W) - Math.floor(cellIdx[j] / W);
+  fcx[j] = 0.5 + 0.42 * dc + (Math.random() - 0.5) * 0.1; fcy[j] = 0.5 + 0.42 * dr + (Math.random() - 0.5) * 0.1;
+}
+function activate(i, lon, lat){
   if (!isActive[i]) { isActive[i] = 1; activeList.push(i); }
-  if (!wasActive[i]) { wasActive[i] = 1; everList.push(i); }
+  if (!wasActive[i]) {
+    wasActive[i] = 1; everList.push(i);
+    if (lon != null) setFocus(i, lon, lat); else focusFromNeighbors(i);
+  }
   const k = cc[i];
   if (k < CN && !cInfected[k]) {
     cInfected[k] = 1; infCountries++;
@@ -162,14 +190,23 @@ function step(dt){
       accA[j] += inf * w;
     }
   }
+  const kd = P.k || 1;
   for (const j of touched) {
     if (S[j] <= 0) continue;
     const k = cc[j];
     let b = beta * envF[j] * (P.vec ? climate[j] : 1) * (k < CN ? cMult[k] : 1);
     if (j === boost.cell && simT < boost.until) b *= boost.factor;
-    const p = 1 - Math.exp(-b * (accA[j] / Neff[j]) * dt);
+    const controlled = j === ctrl.cell && simT < ctrl.until;
+    // la ville simule elle-même ses habitants : seuls les contacts venus des cellules voisines comptent ici
+    const a = controlled ? Math.max(0, accA[j] - I[j]) : accA[j];
+    if (a <= 0) continue;
+    let p = 1 - Math.exp(-b * (a / Neff[j]) * dt);
+    // super-propagation : avec peu de malades, la contagion se fait par à-coups (clusters)
+    if (a < 300) p = Math.min(1, p * gamma(kd * Math.max(a, 0.05)) / (kd * Math.max(a, 0.05)));
     const x = draw(S[j], p);
-    if (x > 0) { S[j] -= x; E[j] += x; totals.cases += x; if (k < CN) cCases[k] += x; activate(j); }
+    if (x <= 0) continue;
+    if (controlled) { extImports += x; continue; }
+    S[j] -= x; E[j] += x; totals.cases += x; if (k < CN) cCases[k] += x; activate(j);
   }
   progress(dt);
   airTravel(dt);
@@ -191,7 +228,7 @@ function progress(dt){
     if (t.done || simT < t.at) continue;
     t.done = true;
     const j = cellAt(t.lat, t.lon);
-    if (j >= 0 && S[j] >= 1) { S[j] -= 1; E[j] += 1; totals.cases += 1; activate(j); if (flights.length < 60) flights.push([t.fromLon, t.fromLat, t.lon, t.lat, 'Patient zéro', t.name]); }
+    if (j >= 0 && S[j] >= 1) { if (j === ctrl.cell && simT < ctrl.until) extImports++; else { S[j] -= 1; E[j] += 1; totals.cases += 1; activate(j, t.lon, t.lat); } if (flights.length < 60) flights.push([t.fromLon, t.fromLat, t.lon, t.lat, 'Patient zéro', t.name]); }
   }
 }
 
@@ -210,7 +247,8 @@ function airTravel(dt){
       const b = routeTo[lo], cb = airCell[b];
       if (cb < 0 || S[cb] < 1) continue;
       if (cc[cb] < CN && cClosed[cc[cb]] && Math.random() < 0.95) continue;   // frontière d'arrivée fermée
-      S[cb] -= 1; E[cb] += 1; totals.cases += 1; if (cc[cb] < CN) cCases[cc[cb]] += 1; activate(cb);
+      if (cb === ctrl.cell && simT < ctrl.until) extImports++;
+      else { S[cb] -= 1; E[cb] += 1; totals.cases += 1; if (cc[cb] < CN) cCases[cc[cb]] += 1; activate(cb, airLon[b], airLat[b]); }
       if (flights.length < 60) flights.push([airLon[a], airLat[a], airLon[b], airLat[b], self.airNames[a], self.airNames[b]]);
     }
   }
@@ -314,6 +352,8 @@ function writeTex(){
     const pE = E[i] >= 0.5 ? Math.max(E[i] / nn, minVis * 0.7) : 0;
     const o = cellIdx[i] * 4;
     tex[o] = enc(pI); tex[o + 1] = enc(pE); tex[o + 2] = enc(R[i] / nn); tex[o + 3] = enc(D[i] / nn);
+    const rad = Math.min(1.5, 0.035 + 2.0 * Math.sqrt(Math.max(0, nn - S[i]) / nn));
+    tex2[o] = Math.round(fcx[i] * 255); tex2[o + 1] = Math.round(fcy[i] * 255); tex2[o + 2] = Math.round(rad / 1.5 * 255); tex2[o + 3] = 255;
     const row = (cellIdx[i] / W) | 0;
     if (row < dirtyR0) dirtyR0 = row; if (row + 1 > dirtyR1) dirtyR1 = row + 1;
   }
@@ -331,8 +371,8 @@ function post(){
   msg.hot = hot;
   const transfer = [cs.buffer];
   if (dirtyR1 > dirtyR0) {
-    const rows = tex.slice(dirtyR0 * W * 4, dirtyR1 * W * 4);
-    msg.r0 = dirtyR0; msg.r1 = dirtyR1; msg.rows = rows; transfer.push(rows.buffer);
+    const rows = tex.slice(dirtyR0 * W * 4, dirtyR1 * W * 4), rows2 = tex2.slice(dirtyR0 * W * 4, dirtyR1 * W * 4);
+    msg.r0 = dirtyR0; msg.r1 = dirtyR1; msg.rows = rows; msg.rows2 = rows2; transfer.push(rows.buffer, rows2.buffer);
   }
   postMessage(msg, transfer);
   dirtyR0 = H; dirtyR1 = -1; flights = []; events = [];
@@ -347,7 +387,8 @@ self.onmessage = async ev => {
     Object.assign(game, m.game || {});
     evo = Object.assign({ r0: 1, lethal: 0, severity: 0, stealth: 0, cold: 0, heat: 0, drug: 0, cureSlow: 0, air: 0, water: 0, vector: 0, animal: 0, blood: 0 }, m.evo || {});
     S.set(N); E.fill(0); I.fill(0); R.fill(0); D.fill(0);
-    for (const i of everList) { const o = cellIdx[i] * 4; tex[o] = tex[o + 1] = tex[o + 2] = tex[o + 3] = 0; }
+    for (const i of everList) { const o = cellIdx[i] * 4; tex[o] = tex[o + 1] = tex[o + 2] = tex[o + 3] = 0; tex2[o + 3] = 0; fcx[i] = fcy[i] = 0.5; }
+    ctrl = { cell: -1, until: 0 }; extImports = 0;
     dirtyR0 = 0; dirtyR1 = H;
     isActive.fill(0); wasActive.fill(0); activeList = []; everList = []; totals = { S: 0, E: 0, I: 0, R: 0, D: 0, cases: 0, V: 0 };
     cLevel.fill(0); cClosed.fill(0); cCollapsed.fill(0); cSince.fill(0); cInfected.fill(0); cCases.fill(0); cMult.fill(1); cQuiet.fill(0);
@@ -360,7 +401,7 @@ self.onmessage = async ev => {
     for (let k = 0; k < CN; k++) cIfr[k] = P.ifr;
     if (P.h2h) {
       const k = Math.min(m.count || 1, S[best]);
-      S[best] -= k; I[best] += k; totals.cases = k; if (cc[best] < CN) cCases[cc[best]] += k; activate(best);
+      S[best] -= k; I[best] += k; totals.cases = k; if (cc[best] < CN) cCases[cc[best]] += k; activate(best, m.lon, m.lat);
     }
     const p0 = m.p0 || {};
     boost = { cell: best, until: simT + (1 / P.sigma + 1 / P.gamma) * DAY, factor: Math.max(0.3, p0.boost || 1) };
@@ -380,16 +421,27 @@ self.onmessage = async ev => {
   }
   else if (m.type === 'citySync' && started) {
     const j = cellAt(m.lat, m.lon); if (j < 0) return;
-    const set = (arr, v) => { if (v > arr[j]) { const d = Math.min(v - arr[j], S[j]); S[j] -= d; arr[j] += d; if (arr !== R && arr !== D) { totals.cases += d; if (cc[j] < CN) cCases[cc[j]] += d; } } };
-    set(E, m.E); set(I, m.I); set(R, m.R); set(D, m.D);
-    if (E[j] + I[j] > 0.5) activate(j); else if (!wasActive[j] && R[j] + D[j] > 0) { wasActive[j] = 1; everList.push(j); }
-    const k = cc[j];
-    postMessage({ type: 'cellInfo', id: 'sync', N: N[j], E: E[j], I: I[j], R: R[j], D: D[j], level: k < CN ? cLevel[k] : 0 });
+    // la cellule est désormais simulée personne par personne : la ville fait foi
+    if (ctrl.cell !== j) extImports = 0;
+    ctrl = { cell: j, until: simT + 0.5 * DAY };
+    const before = E[j] + I[j] + R[j] + D[j];
+    E[j] = Math.max(m.E, 0); I[j] = Math.max(m.I, 0); R[j] = Math.max(R[j], m.R); D[j] = Math.max(D[j], m.D);
+    const tot = E[j] + I[j] + R[j] + D[j];
+    if (tot > N[j]) { const f = N[j] / tot; E[j] *= f; I[j] *= f; R[j] *= f; D[j] *= f; }
+    S[j] = Math.max(0, N[j] - E[j] - I[j] - R[j] - D[j]);
+    const gained = E[j] + I[j] + R[j] + D[j] - before;
+    if (gained > 0) { totals.cases += gained; if (cc[j] < CN) cCases[cc[j]] += gained; }
+    if (E[j] + I[j] > 0.5) activate(j, m.lon, m.lat); else if (!wasActive[j] && R[j] + D[j] > 0) { wasActive[j] = 1; everList.push(j); setFocus(j, m.lon, m.lat); }
+    const k = cc[j], imports = Math.floor(extImports); extImports -= imports;
+    postMessage({ type: 'cellInfo', id: 'sync', N: N[j], E: E[j], I: I[j], R: R[j], D: D[j], level: k < CN ? cLevel[k] : 0, imports });
   }
   else if (m.type === 'cellQuery' && n) {
     const j = cellAt(m.lat, m.lon); if (j < 0) return;
     const k = cc[j];
-    postMessage({ type: 'cellInfo', id: m.id, N: N[j], E: E[j], I: I[j], R: R[j], D: D[j], country: k < CN ? k : -1, level: k < CN ? cLevel[k] : 0 });
+    const rad = Math.min(1.5, 0.035 + 2.0 * Math.sqrt(Math.max(0, N[j] - S[j]) / N[j]));
+    const flon = ((cellIdx[j] % W) + fcx[j]) * 0.25 - 180, flat = 90 - (Math.floor(cellIdx[j] / W) + fcy[j]) * 0.25;
+    postMessage({ type: 'cellInfo', id: m.id, N: N[j], E: E[j], I: I[j], R: R[j], D: D[j], country: k < CN ? k : -1, level: k < CN ? cLevel[k] : 0,
+      focus: wasActive[j] ? [flon, flat, rad * 27.8] : null });
   }
   else if (m.type === 'advance' && started && P) {
     const target = m.t;
