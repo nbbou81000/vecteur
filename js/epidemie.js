@@ -360,12 +360,12 @@ function writeTex(){
   totals.S = s; totals.E = e; totals.I = inf; totals.R = r; totals.D = d;
 }
 
-function post(){
+function post(extra){
   writeTex();
   const cs = new Float32Array(CN * 6);
   for (let k = 0; k < CN; k++) { cs[k * 6] = cE[k] + cI[k]; cs[k * 6 + 1] = cD[k]; cs[k * 6 + 2] = cCases[k]; cs[k * 6 + 3] = cLevel[k]; cs[k * 6 + 4] = cClosed[k]; cs[k * 6 + 5] = cCollapsed[k]; }
   const msg = { type: 'state', t: simT, day: (simT - startT) / DAY, totals: { ...totals }, flights, events, active: activeList.length,
-    cure, cureDone, who, infCountries, countries: cs, vis: visibility() };
+    cure, cureDone, who, infCountries, countries: cs, vis: visibility(), ...(extra || {}) };
   const hot = [];
   for (let q = 0; q < 3 && activeList.length; q++) { const i = activeList[Math.floor(Math.random() * activeList.length)]; hot.push([(cellIdx[i] % W + .5) * .25 - 180, 90 - (Math.floor(cellIdx[i] / W) + .5) * .25]); }
   msg.hot = hot;
@@ -376,6 +376,58 @@ function post(){
   }
   postMessage(msg, transfer);
   dirtyR0 = H; dirtyR1 = -1; flights = []; events = [];
+}
+
+/* ---------- Sauvegarde / restauration ---------- */
+function exportState(){
+  const f32 = a => Float32Array.from(a);
+  return {
+    v: 1, S: f32(S), E: f32(E), I: f32(I), R: f32(R), D: f32(D), fcx: fcx.slice(), fcy: fcy.slice(),
+    active: Int32Array.from(activeList), ever: Int32Array.from(everList),
+    cLevel: cLevel.slice(), cClosed: cClosed.slice(), cCollapsed: cCollapsed.slice(), cSince: cSince.slice(), cInfected: cInfected.slice(),
+    cCases: cCases.slice(), cQuiet: cQuiet.slice(), cMult: cMult.slice(), cIfr: cIfr.slice(),
+    totals: { ...totals }, who, cure, cureDone, cureDay, infCountries, ended, simT, startT, lastDay, P, game: { ...game }, evo: { ...evo },
+    boost: { ...boost }, trips: trips.map(t => ({ ...t })), marks: [...daily.marks], extImports
+  };
+}
+function importState(st){
+  S.set(st.S); E.set(st.E); I.set(st.I); R.set(st.R); D.set(st.D); fcx.set(st.fcx); fcy.set(st.fcy);
+  isActive.fill(0); wasActive.fill(0);
+  activeList = Array.from(st.active); everList = Array.from(st.ever);
+  for (const i of activeList) isActive[i] = 1;
+  for (const i of everList) wasActive[i] = 1;
+  cLevel.set(st.cLevel); cClosed.set(st.cClosed); cCollapsed.set(st.cCollapsed); cSince.set(st.cSince); cInfected.set(st.cInfected);
+  cCases.set(st.cCases); cQuiet.set(st.cQuiet); cMult.set(st.cMult); cIfr.set(st.cIfr);
+  totals = { ...st.totals }; who = st.who; cure = st.cure; cureDone = st.cureDone; cureDay = st.cureDay; infCountries = st.infCountries; ended = st.ended;
+  simT = st.simT; startT = st.startT; lastDay = st.lastDay; P = st.P; game = { ...game, ...st.game }; evo = { ...evo, ...st.evo };
+  boost = st.boost; trips = st.trips; daily.marks = new Set(st.marks); extImports = st.extImports || 0;
+  ctrl = { cell: -1, until: 0 }; climateDay = -1; accA = null; touched = []; events = []; flights = [];
+  tex.fill(0); tex2.fill(0); dirtyR0 = 0; dirtyR1 = H; started = true;
+  updateEnv(true);
+}
+// Avance la simulation jusqu'à « target ». Les longues périodes (onglet en arrière-plan, absence)
+// sont rattrapées par pas d'un jour au plus, avec un message de progression.
+let stopCatchUp = false;
+async function advanceTo(target){
+  const remaining = (target - simT) / DAY;
+  const long = remaining > 3;
+  const maxDt = long ? 1 : 6 / 24;
+  const steps = long ? Math.ceil(remaining / maxDt) : Math.min(Math.ceil(remaining / maxDt), 24);
+  const dt = remaining / steps;
+  const t0 = performance.now(); stopCatchUp = false;
+  for (let s = 0; s < steps; s++) {
+    step(dt); simT += dt * DAY;
+    const d = Math.floor((simT - startT) / DAY);
+    if (d !== lastDay) { lastDay = d; daily(); }
+    if (long && (s % 10 === 9)) {
+      postMessage({ type: 'progress', done: s + 1, total: steps, day: (simT - startT) / DAY, totals: { ...totals }, ms: performance.now() - t0 });
+      await new Promise(r => setTimeout(r, 0));     // laisse passer un éventuel « stop »
+      if (stopCatchUp || ended) break;
+    }
+  }
+  const stopped = stopCatchUp;
+  if (!stopped) simT = Math.max(simT, target);
+  post(long ? { caught: true, stopped } : null);
 }
 
 /* ---------- Messages ---------- */
@@ -444,17 +496,14 @@ self.onmessage = async ev => {
       focus: wasActive[j] ? [flon, flat, rad * 27.8] : null });
   }
   else if (m.type === 'advance' && started && P) {
-    const target = m.t;
-    if (target <= simT) { postMessage({ type: 'idle' }); return; }
-    const remaining = (target - simT) / DAY;
-    const steps = Math.min(Math.ceil(remaining / (6 / 24)), 24);
-    const dt = remaining / steps;
-    for (let s = 0; s < steps; s++) {
-      step(dt); simT += dt * DAY;
-      const d = Math.floor((simT - startT) / DAY);
-      if (d !== lastDay) { lastDay = d; daily(); }
-    }
-    simT = target;
-    post();
+    if (m.t <= simT) { postMessage({ type: 'idle' }); return; }
+    await advanceTo(m.t);
   }
+  else if (m.type === 'stopCatchUp') stopCatchUp = true;
+  else if (m.type === 'save') {
+    if (!started || !P) { postMessage({ type: 'saved', id: m.id, state: null }); return; }
+    const st = exportState();
+    postMessage({ type: 'saved', id: m.id, state: st }, [st.S.buffer, st.E.buffer, st.I.buffer, st.R.buffer, st.D.buffer]);
+  }
+  else if (m.type === 'load') { importState(m.state); post(); postMessage({ type: 'loaded', id: m.id }); }
 };

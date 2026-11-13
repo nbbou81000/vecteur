@@ -148,6 +148,15 @@
   #bFollow.on{background:rgba(255,80,60,.18);color:#ff9d92}
   #cityLine{font-size:12px;color:var(--muted);margin-top:6px}
   .zero.dead{background:#333;animation:none}
+  .ovl{position:fixed;inset:0;z-index:13;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+  .ovl.show{display:flex}
+  .wide2{width:min(560px,100%);text-align:left;max-height:calc(100vh - 32px);overflow:auto}
+  .sv{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .sv b{display:block;font-size:13.5px}.sv span{font-size:11.5px;color:var(--muted)}.sv .cta{margin:0;padding:9px 12px;width:auto;font-size:12.5px}
+  #resume{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(110px + var(--safe-b));z-index:12;width:min(420px,calc(100vw - 28px));padding:14px;display:none;flex-direction:column;gap:4px}
+  #resume.show{display:flex}#resume b{font-size:15px}#resume span{font-size:13px}#resume small{font-size:11.5px;color:var(--muted)}
+  .endBox h3{font-family:"Barlow Condensed";font-size:26px;letter-spacing:.04em;margin:0 0 10px}
+  .awayEv{text-align:left;font-size:12.5px;line-height:1.5;padding-left:18px;margin:4px 0 8px;max-height:200px;overflow:auto}
   .shock{width:20px;height:20px;border-radius:50%;border:3px solid #ff4a3a;pointer-events:none;animation:shock 2s ease-out forwards}
   @keyframes shock{0%{transform:scale(1);opacity:1}100%{transform:scale(28);opacity:0;border-width:1px}}
   #settings{position:fixed;right:14px;bottom:calc(84px + var(--safe-b));width:270px;z-index:11;padding:12px 14px;display:none}
@@ -407,7 +416,7 @@
       <div class="st"><span><i style="background:#fff"></i>Cas au total</span><b id="stC">0</b></div>
     </div>
     <canvas id="spark"></canvas>
-    <button id="bStats" class="cta sec statsBtn">📊 Statistiques détaillées</button>
+    <div class="row2 statsBtn"><button id="bStats" class="cta sec">📊 Statistiques</button><button id="bSave" class="cta sec">💾 Sauvegarder</button></div>
     <div id="cityLine"></div>
     <div id="clusterList"></div>
     <div id="lastEvent"></div>
@@ -435,6 +444,8 @@
   <div id="qualSel" class="seg"><button data-q="auto">Auto</button><button data-q="haute">Haute</button><button data-q="eco">Économie</button></div>
   <div class="note">Auto allège l’affichage si l’image saccade · <span id="fpsVal"></span></div>
   <button id="setSpin" class="opt"></button>
+  <button id="setSaves" class="opt">💾 Parties sauvegardées</button>
+  <label class="fld">Pendant mon absence<select id="setAbs"><option value="vitesse">La partie continue à la vitesse choisie</option><option value="reel">La partie continue en temps réel</option><option value="pause">La partie se met en pause</option></select></label>
   <button id="setHelp" class="opt">Revoir le tutoriel</button>
 </div>
 <div id="tuto"><div class="tutoBox glass"><span id="tutoStep"></span><h3 id="tutoTitle"></h3><p id="tutoText"></p><div class="row2"><button id="tutoSkip" class="cta sec">Passer</button><button id="tutoNext" class="cta"></button></div></div></div>
@@ -449,6 +460,11 @@
   <div class="cols"><div><div class="lbl">Mesures dans le monde (pays)</div><div id="lvlBars"></div></div>
   <div><div class="lbl">Pays les plus touchés</div><table id="topTable"></table></div></div>
 </div></div>
+<div id="savesPanel" class="ovl"><div class="endBox glass wide2"><div class="epiHead"><b>Parties sauvegardées</b><button id="savesClose" aria-label="Fermer">×</button></div><div id="savesList"></div>
+  <p class="note">Les sauvegardes restent dans ce navigateur, sur cet appareil.</p></div></div>
+<div id="resume" class="glass"><b>Reprendre la partie en cours ?</b><span id="resumeText"></span><small id="resumeAbs"></small><div class="row2"><button id="resumeNo" class="cta sec">Plus tard</button><button id="resumeGo" class="cta">Reprendre</button></div></div>
+<div id="catchup" class="ovl"><div class="endBox glass"><h3>Rattrapage du temps écoulé…</h3><div class="cureTrack"><i id="cuBar" style="display:block;height:100%;width:0;background:#ff7a5c"></i></div><p id="cuText" class="note"></p><button id="cuSkip" class="cta sec">Arrêter ici</button></div></div>
+<div id="awayModal" class="ovl"><div class="endBox glass"><h3 id="awayTitle"></h3><div id="awayBody"></div><button id="awayClose" class="cta">Continuer</button></div></div>
 <div id="endModal"><div class="endBox glass"><h2 id="endTitle"></h2><div id="endBody"></div>
   <div class="row2"><button id="endClose" class="cta sec">Continuer à observer</button><button id="endNew" class="cta">Nouvelle partie</button></div></div></div>
 
@@ -1747,8 +1763,10 @@
     epi.worker = new Worker('js/epidemie.js');
     epi.worker.onmessage = ev => {
       const m = ev.data;
-      if (m.type === 'ready') { epi.ready = true; $('epiGo').disabled = false; renderSummary(); }
+      if (m.type === 'ready') { epi.ready = true; $('epiGo').disabled = false; renderSummary(); offerResume(); }
       else if (m.type === 'idle') epi.waiting = false;
+      else if (m.type === 'saved' || m.type === 'loaded') { const k = m.type + ':' + m.id, f = workerWait.get(k); if (f) { workerWait.delete(k); f(m); } }
+      else if (m.type === 'progress') onProgress(m);
       else if (m.type === 'end') showEnd(m);
       else if (m.type === 'cellInfo' && m.id === 'card') showCountry(m.country);
       else if (m.type === 'cellInfo' && city && city.epi) {
@@ -1772,7 +1790,9 @@
           sound.tension(Math.min(1, Math.log10(1 + T.I + T.E) / 9));
         }
         epi.countries = m.countries; epi.cure = m.cure; epi.cureDone = m.cureDone; epi.who = m.who; epi.infCountries = m.infCountries;
-        gameEvents(m);
+        if (!catching) gameEvents(m); else { for (const ev of m.events || []) if (ev.k !== 'pays' || ev.big) pushNews(ev.text); }
+        if (catching && game.mode === 'campagne') for (const [key, v] of [['c', m.totals.cases], ['d', m.totals.D]]) for (let t = 100; t <= 1e10; t *= 10) if (v >= t && !game.marks.has(key + t)) { game.marks.add(key + t); game.dna += 2; }
+        absenceDone(m);
         drawStats();
         map.triggerRepaint();
         if (game.mode !== 'campagne' && m.totals.E + m.totals.I < 0.5 && m.day > 0.5 && epi.running) {
@@ -2435,6 +2455,170 @@
   }
   $('chLog').onchange = drawStatsPanel;
   setInterval(drawStatsPanel, 1500);
+
+  /* ============ Sauvegardes (IndexedDB, dans ce navigateur) ============ */
+  const saves = (() => {
+    let dbp = null;
+    const open = () => dbp || (dbp = new Promise((res, rej) => {
+      const rq = indexedDB.open('vecteur', 1);
+      rq.onupgradeneeded = () => { const db = rq.result; db.createObjectStore('meta', { keyPath: 'id' }); db.createObjectStore('data', { keyPath: 'id' }); };
+      rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+    }));
+    const tx = async (store, mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction(store, mode); const r = fn(t.objectStore(store)); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); };
+    return {
+      put: async (meta, data) => { await tx('data', 'readwrite', s => s.put(data)); await tx('meta', 'readwrite', s => s.put(meta)); },
+      get: id => tx('data', 'readonly', s => s.get(id)),
+      meta: id => tx('meta', 'readonly', s => s.get(id)),
+      list: () => tx('meta', 'readonly', s => s.getAll()),
+      del: async id => { await tx('data', 'readwrite', s => s.delete(id)); await tx('meta', 'readwrite', s => s.delete(id)); }
+    };
+  })();
+  const workerWait = new Map();
+  function askWorker(msg, type){ return new Promise(res => { workerWait.set(type + ':' + msg.id, res); epi.worker.postMessage(msg); }); }
+
+  async function saveGame(id, name, silent){
+    if (!epi.running && !epi.totals) return;
+    const r = await askWorker({ type: 'save', id }, 'saved');
+    if (!r || !r.state) return;
+    const c = map.getCenter();
+    const main = {
+      epi: { p: epi.p, place: epi.place, hist: epi.hist, log: epi.log.slice(-30), lastFlight: epi.lastFlight, running: epi.running },
+      game: { mode: game.mode, goal: game.goal, dna: game.dna, owned: [...game.owned], marks: [...game.marks], lastTrickle: game.lastTrickle, news: game.news, base: game.base },
+      clock: { t: clock.t, speed: clock.speed }, zero: zeroLngLat ? [zeroLngLat.lng, zeroLngLat.lat] : null,
+      cam: { center: [c.lng, c.lat], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() }, realSavedAt: Date.now()
+    };
+    const meta = { id, name: name || `${epi.p.name} · ${epi.place.split(',')[0]} · jour ${Math.floor(epi.day)}`, savedAt: Date.now(), day: Math.floor(epi.day),
+      mode: game.mode, pathogen: epi.p.name, place: epi.place, running: epi.running, cases: epi.totals ? epi.totals.cases : 0 };
+    await saves.put(meta, { id, worker: r.state, main });
+    if (!silent) { toast('Partie sauvegardée'); }
+  }
+
+  async function loadGame(id, catchUp){
+    const rec = await saves.get(id); if (!rec) { toast('Sauvegarde introuvable'); return; }
+    const M = rec.main;
+    // on repart d'une table rase
+    if (epi.running || epiTex.on) { $('epiNew').onclick(); }
+    $('resume').classList.remove('show'); $('savesPanel').classList.remove('show'); $('settings').classList.remove('show');
+    Object.assign(epi, { p: M.epi.p, place: M.epi.place, hist: M.epi.hist || [], log: M.epi.log || [], lastFlight: M.epi.lastFlight || '' });
+    Object.assign(game, { mode: M.game.mode, goal: M.game.goal, dna: M.game.dna, owned: new Set(M.game.owned), marks: new Set(M.game.marks), lastTrickle: M.game.lastTrickle, news: [], base: M.game.base });
+    game.evo = computeEvo();
+    clock.t = clock.vt = M.clock.t; clock.last = performance.now();
+    zeroLngLat = M.zero ? new maplibregl.LngLat(M.zero[0], M.zero[1]) : null;
+    if (zeroLngLat) { const el = document.createElement('div'); el.className = 'zero'; zeroMarker = new maplibregl.Marker({ element: el }).setLngLat(zeroLngLat).addTo(map); }
+    if (city) { city = null; cityLayer.c = null; }      // le quartier sera regénéré à partir de l'état mondial
+    await askWorker({ type: 'load', id, state: rec.worker }, 'loaded');
+    epiTex.on = 1; epi.running = M.epi.running !== false; epi.waiting = false; epi.simT = M.clock.t;
+    for (const n of (M.game.news || []).slice().reverse()) pushNews(n.t);
+    // interface « partie en cours »
+    $('epiSetup').hidden = true; $('epiRun').hidden = false; $('epiTitle').textContent = epi.p.name;
+    $('runPlace').textContent = (epi.p.release ? 'Dispersion : ' : 'Patient zéro : ') + epi.place;
+    $('runState').textContent = ''; $('dnaRow').hidden = !!epi.p.release; drawDNA();
+    follow = false; $('bFollow').classList.remove('on');
+    spinOn = false; $('bSpin').classList.remove('on');
+    map.jumpTo(M.cam);
+    openPanel(!MOBILE);
+    // la partie a-t-elle continué pendant l'absence ?
+    const mode = settingsAbs();
+    if (catchUp && epi.running && mode !== 'pause') {
+      const away = Date.now() - M.realSavedAt;
+      const gain = Math.min(away * (mode === 'reel' ? 1 : Math.max(M.clock.speed, 1)), 365 * 86400000);
+      if (gain > 60000) {
+        startAbsence({ totals: epi.totals, day: epi.day, away, cure: epi.cure, countries: epi.infCountries }, M.clock.t + gain);
+        clock.t = clock.vt = M.clock.t + gain; clock.last = performance.now();
+      }
+    }
+    setSpeed(M.clock.speed || 0);
+    toast('Partie chargée');
+  }
+
+  // ---- Liste des parties
+  $('setSaves').onclick = () => { $('settings').classList.remove('show'); showSaves(); };
+  $('bSave').onclick = () => saveGame('s' + Date.now());
+  $('savesClose').onclick = () => $('savesPanel').classList.remove('show');
+  const fmtSave = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  async function showSaves(){
+    let list = []; try { list = await saves.list(); } catch (e) {}
+    list.sort((a, b) => b.savedAt - a.savedAt);
+    $('savesList').innerHTML = list.length ? list.map(s => `
+      <div class="sv"><div><b>${s.id === 'auto' ? '⟳ Sauvegarde automatique' : s.name}</b>
+        <span>${s.id === 'auto' ? s.name + ' · ' : ''}${s.mode === 'campagne' ? 'Campagne' : 'Bac à sable'} · ${fmtN.format(s.cases || 0)} cas · ${fmtSave.format(s.savedAt)}</span></div>
+        <button class="cta" data-load="${s.id}">Charger</button><button class="cta sec" data-del="${s.id}" aria-label="Supprimer">🗑</button></div>`).join('')
+      : '<p class="note">Aucune partie sauvegardée pour l’instant. Pendant une partie, utilisez « 💾 Sauvegarder ». Une sauvegarde automatique est aussi faite toutes les 20 secondes.</p>';
+    $('savesList').querySelectorAll('[data-load]').forEach(b => b.onclick = () => loadGame(b.dataset.load, b.dataset.load === 'auto'));
+    $('savesList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { await saves.del(b.dataset.del); showSaves(); });
+    $('savesPanel').classList.add('show');
+  }
+
+  // ---- Sauvegarde automatique
+  setInterval(() => { if (epi.running && !catching) saveGame('auto', null, true).catch(() => {}); }, 20000);
+
+  // ---- Pendant mon absence
+  const settingsAbs = () => localStore.get('absence') || 'vitesse';
+  $('setAbs').value = settingsAbs();
+  $('setAbs').onchange = e => localStore.set('absence', e.target.value);
+  let hiddenSnap = null, catching = false, absence = null;
+  document.addEventListener('visibilitychange', () => {
+    if (!epi.running) return;
+    if (document.hidden) {
+      saveGame('auto', null, true).catch(() => {});
+      hiddenSnap = { totals: epi.totals, day: epi.day, at: Date.now(), t: clock.t, speed: clock.speed, cure: epi.cure, countries: epi.infCountries };
+      if (settingsAbs() === 'pause') { hiddenSnap.paused = true; setSpeed(0); }
+    } else if (hiddenSnap) {
+      const s = hiddenSnap; hiddenSnap = null;
+      const away = Date.now() - s.at, mode = settingsAbs();
+      if (s.paused) { setSpeed(s.speed); return; }
+      // le jeu avance de lui-même (horloge) ; en « temps réel », on remplace l'accélération par le temps écoulé
+      let target = mode === 'reel' ? s.t + away : s.t + away * s.speed;
+      target = Math.min(target, s.t + 365 * 86400000);
+      clock.t = clock.vt = target; clock.last = performance.now();
+      if (away > 60000 && target - s.t > 3600000) startAbsence({ totals: s.totals, day: s.day, away, cure: s.cure, countries: s.countries }, target);
+    }
+  });
+  function startAbsence(snap, target){ absence = { ...snap, target, events: [] }; catching = true; }
+  function onProgress(m){
+    // la courbe garde la trace de ce qui s'est passé pendant le rattrapage
+    const dd = Math.floor(m.day), T = m.totals;
+    if (!epi.hist.length || epi.hist[epi.hist.length - 1].d < dd) epi.hist.push({ d: dd, I: T.I + T.E, D: T.D, C: T.cases, R: T.R - (T.V || 0), V: T.V || 0 });
+    if (!catching) return;
+    $('catchup').classList.add('show');
+    $('cuBar').style.width = (m.done / m.total * 100).toFixed(1) + '%';
+    $('cuText').textContent = `Jour ${Math.floor(m.day)} · ${fmtN.format(m.totals.cases)} cas · ${fmtN.format(m.totals.D)} morts`;
+  }
+  $('cuSkip').onclick = () => epi.worker.postMessage({ type: 'stopCatchUp' });
+  // appelé à chaque état reçu : si un rattrapage était en cours, on affiche le bilan
+  function absenceDone(m){
+    if (!catching || !absence) return;
+    if (m.events) absence.events.push(...m.events.filter(e => e.k !== 'pays' || e.big).map(e => e.text));
+    if (!m.caught && m.t < absence.target - 120000) return;   // pas encore fini
+    if (m.stopped) { clock.t = clock.vt = m.t; clock.last = performance.now(); }   // le joueur a arrêté le rattrapage
+    catching = false; $('catchup').classList.remove('show');
+    const a = absence, T = m.totals, T0 = a.totals || { cases: 0, D: 0 };
+    const h = a.away / 3600000;
+    $('awayTitle').textContent = `Pendant votre absence (${h >= 24 ? Math.round(h / 24) + ' j' : h >= 1 ? Math.round(h) + ' h' : Math.round(a.away / 60000) + ' min'})`;
+    $('awayBody').innerHTML = `<div class="endStats">
+      <div><span>Jours simulés</span><b>+${Math.floor(m.day - (a.day || 0))}</b></div>
+      <div><span>Nouveaux cas</span><b>+${fmtN.format(Math.max(0, T.cases - T0.cases))}</b></div>
+      <div><span>Nouveaux morts</span><b>+${fmtN.format(Math.max(0, T.D - T0.D))}</b></div>
+      <div><span>Pays touchés</span><b>${m.infCountries}${a.countries != null ? ` (+${m.infCountries - a.countries})` : ''}</b></div>
+      <div><span>Vaccin</span><b>${Math.round(m.cure)} %</b></div>
+      <div><span>Jour actuel</span><b>${Math.floor(m.day)}</b></div></div>
+      ${a.events.length ? '<div class="lbl">Ce qui s’est passé</div><ul class="awayEv">' + a.events.slice(-12).reverse().map(t => `<li>${t}</li>`).join('') + '</ul>' : '<p class="note">Rien de marquant.</p>'}`;
+    $('awayModal').classList.add('show');
+    absence = null;
+  }
+  $('awayClose').onclick = () => $('awayModal').classList.remove('show');
+
+  // ---- Reprise au lancement
+  async function offerResume(){
+    let m = null; try { m = await saves.meta('auto'); } catch (e) {}
+    if (!m || !m.running) return;
+    const ago = (Date.now() - m.savedAt) / 60000;
+    $('resumeText').textContent = `${m.name} · ${m.mode === 'campagne' ? 'Campagne' : 'Bac à sable'} · il y a ${ago >= 1440 ? Math.round(ago / 1440) + ' j' : ago >= 60 ? Math.round(ago / 60) + ' h' : Math.max(1, Math.round(ago)) + ' min'}`;
+    $('resumeAbs').textContent = { vitesse: 'La partie a continué à la vitesse choisie pendant votre absence.', reel: 'La partie a continué en temps réel pendant votre absence.', pause: 'La partie était en pause.' }[settingsAbs()];
+    $('resume').classList.add('show');
+    $('resumeGo').onclick = () => loadGame('auto', true);
+    $('resumeNo').onclick = () => $('resume').classList.remove('show');
+  }
 
   function drawStats(){
     const T = epi.totals; if (!T) return;
