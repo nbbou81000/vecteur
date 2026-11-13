@@ -17,6 +17,8 @@ let nbOff, nbIdx, nbW;
 let airCell, airLat, airLon, airDep, routeOff, routeTo, routeCum;
 let activeList = [], everList = [], isActive, wasActive;
 let tex, dirtyR0 = H, dirtyR1 = -1;
+const rowDirty = new Uint8Array(720);   // lignes de la texture réellement modifiées depuis le dernier envoi
+let allDirty = true, workMs = 0;
 let P = null, simT = null, startT = null, started = false, ended = false;
 let peoplePerDot = 6000, flights = [], events = [];
 let totals = { S: 0, E: 0, I: 0, R: 0, D: 0, cases: 0, V: 0 };
@@ -454,11 +456,15 @@ function writeTex(){
     const pI = I[i] >= 0.5 ? Math.max(I[i] / nn, minVis) : 0;
     const pE = E[i] >= 0.5 ? Math.max(E[i] / nn, minVis * 0.7) : 0;
     const o = cellIdx[i] * 4;
-    tex[o] = enc(pI); tex[o + 1] = enc(pE); tex[o + 2] = enc(R[i] / nn); tex[o + 3] = enc(D[i] / nn);
+    const a0 = enc(pI), a1 = enc(pE), a2 = enc(R[i] / nn), a3 = enc(D[i] / nn);
     const rad = Math.min(1.5, 0.035 + 2.0 * Math.sqrt(Math.max(0, nn - S[i]) / nn));
-    tex2[o] = Math.round(fcx[i] * 255); tex2[o + 1] = Math.round(fcy[i] * 255); tex2[o + 2] = Math.round(rad / 1.5 * 255); tex2[o + 3] = 255;
-    const row = (cellIdx[i] / W) | 0;
-    if (row < dirtyR0) dirtyR0 = row; if (row + 1 > dirtyR1) dirtyR1 = row + 1;
+    const b0 = Math.round(fcx[i] * 255), b1 = Math.round(fcy[i] * 255), b2 = Math.round(rad / 1.5 * 255);
+    // on ne marque la ligne que si quelque chose a vraiment changé (envoi différentiel)
+    if (tex[o] !== a0 || tex[o + 1] !== a1 || tex[o + 2] !== a2 || tex[o + 3] !== a3 || tex2[o] !== b0 || tex2[o + 1] !== b1 || tex2[o + 2] !== b2 || tex2[o + 3] !== 255) {
+      tex[o] = a0; tex[o + 1] = a1; tex[o + 2] = a2; tex[o + 3] = a3;
+      tex2[o] = b0; tex2[o + 1] = b1; tex2[o + 2] = b2; tex2[o + 3] = 255;
+      rowDirty[(cellIdx[i] / W) | 0] = 1;
+    }
   }
   totals.S = s; totals.E = e; totals.I = inf; totals.R = r; totals.D = d;
 }
@@ -478,12 +484,24 @@ function post(extra){
   for (let q = 0; q < 3 && activeList.length; q++) { const i = activeList[Math.floor(Math.random() * activeList.length)]; hot.push([(cellIdx[i] % W + .5) * .25 - 180, 90 - (Math.floor(cellIdx[i] / W) + .5) * .25]); }
   msg.hot = hot;
   const transfer = [cs.buffer];
-  if (dirtyR1 > dirtyR0) {
-    const rows = tex.slice(dirtyR0 * W * 4, dirtyR1 * W * 4), rows2 = tex2.slice(dirtyR0 * W * 4, dirtyR1 * W * 4);
-    msg.r0 = dirtyR0; msg.r1 = dirtyR1; msg.rows = rows; msg.rows2 = rows2; transfer.push(rows.buffer, rows2.buffer);
+  // segments de lignes consécutives modifiées
+  if (allDirty || dirtyR1 > dirtyR0) { rowDirty.fill(1); allDirty = false; dirtyR0 = H; dirtyR1 = -1; }
+  const segs = []; let total = 0;
+  for (let r = 0; r < H; r++) {
+    if (!rowDirty[r]) continue;
+    let e = r; while (e + 1 < H && rowDirty[e + 1]) e++;
+    segs.push([r, e + 1]); total += e + 1 - r; r = e;
   }
+  if (segs.length) {
+    const rows = new Uint8Array(total * W * 4), rows2 = new Uint8Array(total * W * 4);
+    let off = 0;
+    for (const [a, b] of segs) { const len = (b - a) * W * 4; rows.set(tex.subarray(a * W * 4, b * W * 4), off); rows2.set(tex2.subarray(a * W * 4, b * W * 4), off); off += len; }
+    msg.segs = segs; msg.rows = rows; msg.rows2 = rows2; transfer.push(rows.buffer, rows2.buffer);
+    rowDirty.fill(0);
+  }
+  msg.work = workMs; msg.bytes = total * W * 8;
   postMessage(msg, transfer);
-  dirtyR0 = H; dirtyR1 = -1; flights = []; events = [];
+  flights = []; events = [];
 }
 
 /* ---------- Sauvegarde / restauration ---------- */
@@ -524,7 +542,7 @@ async function advanceTo(target){
   const maxDt = long ? 1 : 6 / 24;
   const steps = long ? Math.ceil(remaining / maxDt) : Math.min(Math.ceil(remaining / maxDt), 24);
   const dt = remaining / steps;
-  const t0 = performance.now(); stopCatchUp = false;
+  const t0 = performance.now(); stopCatchUp = false; workMs = 0;
   for (let s = 0; s < steps; s++) {
     step(dt); simT += dt * DAY;
     const d = Math.floor((simT - startT) / DAY);
@@ -535,7 +553,7 @@ async function advanceTo(target){
       if (stopCatchUp || ended) break;
     }
   }
-  const stopped = stopCatchUp;
+  const stopped = stopCatchUp; workMs = performance.now() - t0;
   if (!stopped) simT = Math.max(simT, target);
   post(long ? { caught: true, stopped } : null);
 }

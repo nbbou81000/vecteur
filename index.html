@@ -161,6 +161,7 @@
   .crGrid section{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
   .crGrid h4{margin:0 0 6px;font-size:14px}
   .crisisBtn{background:linear-gradient(180deg,#3a7bd5,#2558a8);box-shadow:0 6px 18px rgba(40,90,170,.35)}
+  #perfBox{position:fixed;left:14px;top:calc(176px + var(--safe-t));z-index:9;padding:8px 10px;font:500 11.5px/1.5 ui-monospace,Menlo,monospace;color:#cfe;pointer-events:none;white-space:pre}
   .ovl{position:fixed;inset:0;z-index:13;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
   .ovl.show{display:flex}
   .wide2{width:min(560px,100%);text-align:left;max-height:calc(100vh - 32px);overflow:auto}
@@ -446,6 +447,7 @@
 </div>
 <div id="place" class="glass"><span id="placeText"></span><button id="placeOk" hidden>☣ Libérer</button><button id="placeCancel">Annuler</button></div>
 <div id="toast" class="glass"></div>
+<div id="perfBox" class="glass" hidden></div>
 <div hidden>    <button class="tool on" id="bSpin" hidden data-tip="Rotation automatique" aria-label="Rotation">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
     </button>
@@ -467,6 +469,7 @@
   <button id="setSpin" class="opt"></button>
   <button id="setSaves" class="opt">💾 Parties sauvegardées</button>
   <label class="fld">Pendant mon absence<select id="setAbs"><option value="vitesse">La partie continue à la vitesse choisie</option><option value="reel">La partie continue en temps réel</option><option value="pause">La partie se met en pause</option></select></label>
+  <label class="tog"><input type="checkbox" id="setPerf"> Afficher les performances</label>
   <button id="setHelp" class="opt">Revoir le tutoriel</button>
 </div>
 <div id="tuto"><div class="tutoBox glass"><span id="tutoStep"></span><h3 id="tutoTitle"></h3><p id="tutoText"></p><div class="row2"><button id="tutoSkip" class="cta sec">Passer</button><button id="tutoNext" class="cta"></button></div></div></div>
@@ -834,7 +837,8 @@
   const EPI_W = 1440, EPI_H = 720;
   // Seconde texture : centre du foyer dans la cellule (R, G) et rayon (B) → les malades se regroupent
   const CSTRIDE = 13;   // valeurs par pays envoyées par le moteur
-  const epiTex = { data: new Uint8Array(EPI_W * EPI_H * 4), data2: new Uint8Array(EPI_W * EPI_H * 4), r0: 0, r1: EPI_H, tex: null, tex2: null, on: 0 };
+  const epiTex = { data: new Uint8Array(EPI_W * EPI_H * 4), data2: new Uint8Array(EPI_W * EPI_H * 4), r0: 0, r1: EPI_H, tex: null, tex2: null, on: 0, segs: [] };
+  const perf = { points: 0, work: 0, bytes: 0, uploads: 0 };
   function bindEpiTex(gl, pr){
     if (!epiTex.tex) {
       epiTex.tex = gl.createTexture();
@@ -853,15 +857,21 @@
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, EPI_W, EPI_H, 0, gl.RGBA, gl.UNSIGNED_BYTE, epiTex.data2);
       epiTex.r0 = EPI_H; epiTex.r1 = 0;
     }
-    if (epiTex.r1 > epiTex.r0) {
+    // envoi à la carte graphique : seulement les lignes modifiées (segments), ou tout si demandé
+    if (epiTex.r1 > epiTex.r0) { epiTex.segs.push([epiTex.r0, epiTex.r1]); epiTex.r0 = EPI_H; epiTex.r1 = 0; }
+    if (epiTex.segs.length) {
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      // segments fusionnés (évite d'envoyer deux fois la même ligne)
+      const segs = epiTex.segs.sort((a, b) => a[0] - b[0]), merged = [];
+      for (const sg of segs) { const l = merged[merged.length - 1]; if (l && sg[0] <= l[1]) l[1] = Math.max(l[1], sg[1]); else merged.push([sg[0], sg[1]]); }
       for (const [t, d] of [[epiTex.tex, epiTex.data], [epiTex.tex2, epiTex.data2]]) {
         gl.bindTexture(gl.TEXTURE_2D, t);
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, epiTex.r0, EPI_W, epiTex.r1 - epiTex.r0, gl.RGBA, gl.UNSIGNED_BYTE, d.subarray(epiTex.r0 * EPI_W * 4, epiTex.r1 * EPI_W * 4));
+        for (const [a, b] of merged) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, a, EPI_W, b - a, gl.RGBA, gl.UNSIGNED_BYTE, d.subarray(a * EPI_W * 4, b * EPI_W * 4));
       }
-      epiTex.r0 = EPI_H; epiTex.r1 = 0;
+      perf.uploads += merged.reduce((s, x) => s + x[1] - x[0], 0);
+      epiTex.segs = [];
     }
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, epiTex.tex2);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, epiTex.tex);
@@ -1007,12 +1017,29 @@
 
   const popLayer = {
     id: 'population', type: 'custom', renderingMode: '2d', programs: {}, count: 0, visible: true, fade: 1,
-    onAdd(m, gl){ this.gl = gl; this.buf = gl.createBuffer(); this.wbuf = gl.createBuffer(); },
+    onAdd(m, gl){ this.gl = gl; this.buf = gl.createBuffer(); this.wbuf = gl.createBuffer(); this.cbuf = gl.createBuffer(); this.fbuf = gl.createBuffer(); this.nbuf = gl.createBuffer(); },
+    // Pré-calcul, une fois pour toutes, de la cellule de chaque point, de sa position dans la cellule
+    // et de sa direction sur la sphère (évite des calculs trigonométriques à chaque image)
     upload(home, work){
-      const gl = this.gl;
+      const gl = this.gl, n = home.length / 2;
+      const cell = new Uint16Array(n * 2), frac = new Uint8Array(n * 2), nrm = new Int8Array(n * 4);
+      const R = Math.PI / 180;
+      for (let i = 0; i < n; i++) {
+        const mx = home[2 * i] / 65535, my = home[2 * i + 1] / 65535;
+        const lon = mx * 360 - 180, lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * my))) / R;
+        const gx = (lon + 180) * 4, gy = (90 - lat) * 4;
+        const cx = Math.min(1439, Math.max(0, Math.floor(gx))), cy = Math.min(719, Math.max(0, Math.floor(gy)));
+        cell[2 * i] = cx; cell[2 * i + 1] = cy;
+        frac[2 * i] = Math.round((gx - cx) * 255); frac[2 * i + 1] = Math.round((gy - cy) * 255);
+        const cl = Math.cos(lat * R);
+        nrm[4 * i] = Math.round(cl * Math.cos(lon * R) * 127); nrm[4 * i + 1] = Math.round(cl * Math.sin(lon * R) * 127); nrm[4 * i + 2] = Math.round(Math.sin(lat * R) * 127);
+      }
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buf); gl.bufferData(gl.ARRAY_BUFFER, home, gl.STATIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.wbuf); gl.bufferData(gl.ARRAY_BUFFER, work, gl.STATIC_DRAW);
-      this.count = home.length / 2;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.cbuf); gl.bufferData(gl.ARRAY_BUFFER, cell, gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.fbuf); gl.bufferData(gl.ARRAY_BUFFER, frac, gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.nbuf); gl.bufferData(gl.ARRAY_BUFFER, nrm, gl.STATIC_DRAW);
+      this.count = n;
       map.triggerRepaint();
     },
     program(gl, sd){
@@ -1020,40 +1047,57 @@
       if (!p) p = this.programs[sd.variantName] = compile(gl, `#version 300 es
         ${sd.vertexShaderPrelude}
         ${sd.define}
-        in vec2 a_pos; in vec2 a_work;
+        in vec2 a_pos; in vec2 a_work; in vec2 a_cell; in vec2 a_frac; in vec4 a_nrm;
         uniform vec3 u_sun; uniform float u_utc; uniform float u_size; uniform float u_alpha; uniform float u_pass;
+        uniform mediump sampler2D u_state; uniform mediump sampler2D u_focus; uniform float u_epi;
         out float v_night; out float v_a; out float v_kind; out float v_state;
-        ${GLSL_GEO}
-        ${GLSL_STATE}
         float hash(float n){ return fract(sin(n) * 43758.5453123); }
+        // état d'une personne selon sa cellule (pré-calculée) et un tirage fixe u
+        float epiStateC(vec2 cell, vec2 fr, float u){
+          if (u_epi < 0.5) return 0.0;
+          ivec2 c = ivec2(cell);
+          vec4 p = texelFetch(u_state, c, 0);
+          if (p.r + p.g + p.b + p.a == 0.0) return 0.0;
+          p = p * p;
+          vec4 f = texelFetch(u_focus, c, 0);
+          if (f.a > 0.5) {
+            float rad = f.b * 1.5;
+            if (length(fr - f.rg) > rad) return 0.0;
+            p = min(p / min(1.0, 3.14159 * rad * rad), vec4(1.0));
+          }
+          float s = p.a; if (u < s) return 4.0;
+          s += p.b; if (u < s) return 3.0;
+          s += p.r; if (u < s) return 2.0;
+          s += p.g; if (u < s) return 1.0;
+          return 0.0;
+        }
         void main(){
           float id = float(gl_VertexID);
+          v_state = epiStateC(a_cell, a_frac, hash(id * 0.9137 + 4.4));
+          // passes : d'abord les sains / guéris / morts, puis les malades et personnes en incubation par-dessus
+          bool sick = v_state > 0.5 && v_state < 2.5;
+          if (sick != (u_pass > 0.5)) { gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
           float h1 = hash(id * 0.1371 + 1.3), h2 = hash(id * 0.7193 + 7.1), h3 = hash(id * 0.3117 + 2.9), h4 = hash(id * 0.5591 + 5.3);
           vec2 jit = (vec2(h1, h2) - 0.5) / 65535.0;
           vec2 home = a_pos + jit, work = a_work + jit;
           // Heure solaire locale du point (0–24)
-          float lonDeg = home.x * 360.0 - 180.0;
+          float lonDeg = (a_cell.x + a_frac.x) * 0.25 - 180.0;
           float h = mod(u_utc + lonDeg / 15.0, 24.0);
           // Distance du trajet → durée (≈ 25 km/h de porte à porte, entre 15 min et 1 h 30)
-          float latR = 2.0 * atan(exp(V_PI * (1.0 - 2.0 * home.y))) - V_PI * 0.5;
-          float km = length(work - home) * 40075.0 * cos(latR);
+          float km = length(work - home) * 40075.0 * length(a_nrm.xy);
           float dur = clamp(km / 25.0, 0.25, 1.5);
           float dep = 6.3 + h3 * 3.0;          // départ entre 6 h 20 et 9 h 20
           float ret = 16.3 + h4 * 3.2;          // retour entre 16 h 20 et 19 h 30
-          v_state = epiState(a_pos, hash(id * 0.9137 + 4.4));
           // les malades restent souvent chez eux, les morts ne bougent plus
           float stay = (v_state > 3.5 || (v_state > 1.5 && v_state < 2.5 && h4 < 0.6)) ? 0.0 : 1.0;
           float p = stay * smoothstep(dep, dep + dur, h) * (1.0 - smoothstep(ret, ret + dur, h));
           vec2 pos = mix(home, work, p);
           gl_Position = projectTile(pos);
-          v_night = smoothstep(0.04, -0.12, dot(mercToNormal(pos), u_sun));
+          v_night = smoothstep(0.04, -0.12, dot(a_nrm.xyz, u_sun));
           float moving = step(0.02, p) * step(p, 0.98);
           v_kind = moving * 2.0;
           v_a = u_alpha * mix(0.8, 1.0, h2);
-          // 2 passes : d'abord les sains / guéris / morts, puis les malades et personnes en incubation par-dessus
-          bool sick = v_state > 0.5 && v_state < 2.5;
-          if (sick != (u_pass > 0.5)) { gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
-          if (u_pass > 1.5) { v_kind = -1.0; v_a = u_alpha * 0.32; gl_PointSize = u_size * 7.0; return; }   // halo lumineux des foyers
+          if (u_pass > 1.5) { v_kind = -1.0; v_a = u_alpha * 0.32; gl_PointSize = u_size * 6.0; return; }   // halo lumineux des foyers
           if (!sick && u_epi > 0.5) v_a *= 0.7;
           gl_PointSize = u_size * mix(0.85, 1.2, h1) * (1.0 + moving * 0.15) * (v_state > 3.5 ? 0.7 : v_state > 1.5 ? 2.0 : v_state > 0.5 ? 1.45 : 1.0);
         }`, DOT_FS);
@@ -1072,19 +1116,22 @@
       gl.uniform1f(p.u('u_alpha'), Math.min(0.55 + Math.max(z - 1, 0) * 0.06, 1) * this.fade);
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.disable(gl.DEPTH_TEST);
-      const l1 = gl.getAttribLocation(p, 'a_pos'), l2 = gl.getAttribLocation(p, 'a_work');
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf); gl.enableVertexAttribArray(l1);
-      gl.vertexAttribPointer(l1, 2, gl.UNSIGNED_SHORT, true, 0, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.wbuf); gl.enableVertexAttribArray(l2);
-      gl.vertexAttribPointer(l2, 2, gl.UNSIGNED_SHORT, true, 0, 0);
+      const att = [['a_pos', this.buf, 2, gl.UNSIGNED_SHORT, true], ['a_work', this.wbuf, 2, gl.UNSIGNED_SHORT, true], ['a_cell', this.cbuf, 2, gl.UNSIGNED_SHORT, false],
+        ['a_frac', this.fbuf, 2, gl.UNSIGNED_BYTE, true], ['a_nrm', this.nbuf, 4, gl.BYTE, true]];
+      const locs = [];
+      for (const [name, buf, size, type, norm] of att) {
+        const l = gl.getAttribLocation(p, name); if (l < 0) continue;
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, type, norm, 0, 0); locs.push(l);
+      }
       const cnt = Math.floor(this.count * quality.dotFrac);
-      if (epiTex.on && z < 7 && quality.level > 0) {   // halo additif sous les points
+      perf.points = cnt;
+      if (epiTex.on && z < 6.5 && quality.level > 0) {   // halo additif sous les points
         gl.blendFunc(gl.ONE, gl.ONE); gl.uniform1f(p.u('u_pass'), 2); gl.drawArrays(gl.POINTS, 0, cnt);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       }
       gl.uniform1f(p.u('u_pass'), 0); gl.drawArrays(gl.POINTS, 0, cnt);
       if (epiTex.on) { gl.uniform1f(p.u('u_pass'), 1); gl.drawArrays(gl.POINTS, 0, cnt); }
-      gl.disableVertexAttribArray(l1); gl.disableVertexAttribArray(l2);
+      for (const l of locs) gl.disableVertexAttribArray(l);
     }
   };
 
@@ -1570,7 +1617,9 @@
     cityLayer.fade = cf; popLayer.fade = 1 - cf;
     if (city && cf > 0) city.update();
     pumpEpidemic();
-    const live = clock.speed >= 60 || z >= 11;
+    // animation continue seulement si quelque chose bouge : trajets (jusqu'à 1 h/s), vue rue, avions ;
+    // au-delà de 1 h/s les points sont figés : on ne redessine qu'à l'arrivée de nouvelles données
+    const live = (clock.speed >= 60 && clock.speed <= 3600) || z >= 11 || (city && cf > 0) || flightLayer.list.length > 0;
     if (live || now - lastSlow > 1000) {
       if (!live) lastSlow = now;
       if (!map.isMoving()) map.triggerRepaint();
@@ -1838,11 +1887,16 @@
       else if (m.type === 'error') { epi.running = false; epi.waiting = false; showSetup(); toast(m.message); }
       else if (m.type === 'state') {
         epi.waiting = false; epi.simT = m.t; epi.totals = m.totals; epi.day = m.day;
-        if (m.rows) {
-          epiTex.data.set(m.rows, m.r0 * EPI_W * 4);
-          if (m.rows2) epiTex.data2.set(m.rows2, m.r0 * EPI_W * 4);
-          epiTex.r0 = Math.min(epiTex.r0, m.r0); epiTex.r1 = Math.max(epiTex.r1, m.r1);
+        if (m.rows && m.segs) {
+          let off = 0;
+          for (const [a, b] of m.segs) {
+            const len = (b - a) * EPI_W * 4;
+            epiTex.data.set(m.rows.subarray(off, off + len), a * EPI_W * 4);
+            epiTex.data2.set(m.rows2.subarray(off, off + len), a * EPI_W * 4);
+            epiTex.segs.push([a, b]); off += len;
+          }
         }
+        perf.work = m.work || 0; perf.bytes += m.bytes || 0;
         for (const f of m.flights) flightLayer.add(f);
         if (m.flights.length) { const f = m.flights[m.flights.length - 1]; epi.lastFlight = `✈ Cas importé : ${f[4]} → ${f[5]}`; }
         const dd = Math.floor(m.day);
@@ -1855,7 +1909,7 @@
         if (!catching) gameEvents(m); else { for (const ev of m.events || []) if (ev.k !== 'pays' || ev.big) pushNews(ev.text); }
         if (catching && game.mode === 'campagne') for (const [key, v] of [['c', m.totals.cases], ['d', m.totals.D]]) for (let t = 100; t <= 1e10; t *= 10) if (v >= t && !game.marks.has(key + t)) { game.marks.add(key + t); game.dna += 2; }
         absenceDone(m);
-        drawStats();
+        if (!drawStats.tm) drawStats.tm = setTimeout(() => { drawStats.tm = null; drawStats(); }, 330);
         map.triggerRepaint();
         if (game.mode !== 'campagne' && m.totals.E + m.totals.I < 0.5 && m.day > 0.5 && epi.running) {
           epi.running = false;
@@ -1865,8 +1919,12 @@
     };
     epi.worker.postMessage({ type: 'init', base: new URL('.', location.href).href, peoplePerDot: WORLD_POP / (DOTS.length / 2) });
   }
+  let lastPump = 0;
   function pumpEpidemic(){
+    const now = performance.now();
+    if (clock.speed > 3600 && now - lastPump < 250 && !catching) return;   // en accéléré : 4 mises à jour par seconde suffisent
     if (epi.running && !epi.waiting && clock.speed > 0 && clock.t > epi.simT + 60000) {
+      lastPump = now;
       epi.waiting = true; epi.worker.postMessage({ type: 'advance', t: clock.t });
     }
   }
@@ -2244,10 +2302,14 @@
     sound.play('news');
     game.news.unshift({ t, d: Math.floor(epi.day) });
     game.news = game.news.slice(0, 12);
-    const txt = game.news.map(n => `<span><b>J${n.d}</b> ${n.t}</span>`).join('<i>•</i>');
-    $('tickerText').innerHTML = txt + '<i>•</i>' + txt;
-    $('ticker').classList.add('show');
-    $('tickerText').style.animationDuration = Math.max(20, game.news.length * 7) + 's';
+    if (pushNews.tm) return;
+    pushNews.tm = setTimeout(() => {
+      pushNews.tm = null;
+      const txt = game.news.map(n => `<span><b>J${n.d}</b> ${n.t}</span>`).join('<i>•</i>');
+      $('tickerText').innerHTML = txt + '<i>•</i>' + txt;
+      $('ticker').classList.add('show');
+      $('tickerText').style.animationDuration = Math.max(20, game.news.length * 7) + 's';
+    }, 800);
   }
 
   // Fiche pays au toucher
@@ -2450,6 +2512,30 @@
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
+  })();
+
+  // ---- Compteur de performance (réglages)
+  $('setPerf').checked = !!localStore.get('perf'); $('perfBox').hidden = !$('setPerf').checked;
+  $('setPerf').onchange = e => { localStore.set('perf', e.target.checked); $('perfBox').hidden = !e.target.checked; };
+  (() => {
+    let frames = 0, t0 = performance.now(), worst = 0, last = performance.now(), bytes0 = 0, up0 = 0;
+    function loop(now){
+      frames++; worst = Math.max(worst, now - last); last = now;
+      if (now - t0 > 1000) {
+        if (!$('perfBox').hidden) {
+          const s = (now - t0) / 1000;
+          $('perfBox').textContent = `Images/s     ${Math.round(frames / s)}  (pire : ${Math.round(worst)} ms)\n`
+            + `Points        ${fmtN.format(perf.points)}\n`
+            + `Moteur        ${Math.round(perf.work)} ms / mise à jour\n`
+            + `Données       ${fmtN.format((perf.bytes - bytes0) / 1024 / s)} Ko/s\n`
+            + `Envoi GPU     ${Math.round((perf.uploads - up0) / s)} lignes/s\n`
+            + `Redessin      ${(clock.speed >= 60 && clock.speed <= 3600) || map.getZoom() >= 11 ? 'continu' : 'à la demande'}`;
+        }
+        frames = 0; worst = 0; t0 = now; bytes0 = perf.bytes; up0 = perf.uploads;
+      }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
   })();
 
   // ---- Menu de réglages
