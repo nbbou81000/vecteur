@@ -87,6 +87,7 @@ async function init(base, ppd){
   const z = () => new Float64Array(CN);
   cLevel = new Uint8Array(CN); cClosed = new Uint8Array(CN); cCollapsed = new Uint8Array(CN); cSince = z(); cInfected = new Uint8Array(CN);
   cCases = z(); cE = z(); cI = z(); cD = z(); cR = z(); cMult = new Float32Array(CN).fill(1); cIfr = new Float32Array(CN); cVac = new Uint8Array(CN); cQuiet = z();
+  crisisInit();
   // Voisinage : les 8 cellules autour (déplacements quotidiens)
   const off = [], idx = [], w = [];
   for (let i = 0; i < n; i++) {
@@ -238,15 +239,15 @@ function airTravel(dt){
     const c = airCell[a]; if (c < 0 || !isActive[c]) continue;
     const carriers = (E[c] + 0.4 * I[c]) / N[c] * carrierF;
     if (carriers <= 0) continue;
-    const ka = cc[c], closedA = ka < CN && cClosed[ka];
-    const k = poisson(airDep[a] * dt * carriers * (closedA ? 0.05 : 1));
+    const ka = cc[c], travelA = ka < CN ? cTravel[ka] : 1;
+    const k = poisson(airDep[a] * dt * carriers * travelA);
     for (let t = 0; t < k; t++) {
       const r0 = routeOff[a], r1 = routeOff[a + 1]; if (r1 <= r0) break;
       const x = Math.random() * routeCum[r1 - 1];
       let lo = r0, hi = r1 - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (routeCum[m] < x) lo = m + 1; else hi = m; }
       const b = routeTo[lo], cb = airCell[b];
       if (cb < 0 || S[cb] < 1) continue;
-      if (cc[cb] < CN && cClosed[cc[cb]] && Math.random() < 0.95) continue;   // frontière d'arrivée fermée
+      if (cc[cb] < CN && Math.random() > cTravel[cc[cb]]) continue;   // frontière d'arrivée : quarantaine, test ou fermeture
       if (cb === ctrl.cell && simT < ctrl.until) extImports++;
       else { S[cb] -= 1; E[cb] += 1; totals.cases += 1; if (cc[cb] < CN) cCases[cc[cb]] += 1; activate(cb, airLon[b], airLat[b]); }
       if (flights.length < 60) flights.push([airLon[a], airLat[a], airLon[b], airLat[b], self.airNames[a], self.airNames[b]]);
@@ -257,73 +258,175 @@ function airTravel(dt){
 /* ---------- Une fois par jour simulé : bilans, réactions, recherche, vaccination ---------- */
 const LEVELS = ['Aucune mesure', 'Surveillance renforcée', 'Masques et gestes barrières', 'Écoles fermées, frontières fermées', 'Confinement général'];
 const MULT = [1, 0.95, 0.8, 0.6, 0.38];
+/* ---------- Politiques sanitaires ----------
+   Une politique décrit toutes les mesures d'un pays. Les pays non gérés par le joueur appliquent
+   une politique automatique selon leur niveau d'alerte. Effets chiffrés d'après les ordres de grandeur
+   publiés (Brauner et al., Science 2021 ; Haug et al., Nat. Hum. Behav. 2020 ; méta-analyses sur les masques). */
+const POL0 = { tests: 0, tracing: 0, quarantine: false, masks: 0, distancing: false, jauge: 1,
+  close: { bars: false, restos: false, ecoles: false, culte: false, sport: false, evenements: false, commerces: false },
+  telework: 0, curfew: 0, lockdown: 0, transit: 0, borders: 0, field: 0, stock: false, treat: false };
+const clonePol = p => JSON.parse(JSON.stringify(p));
+function aiPolicy(level){
+  const p = clonePol(POL0);
+  if (level >= 1) { p.tests = 0.2; p.tracing = 0.15; }
+  if (level >= 2) { p.tests = 0.8; p.tracing = 0.3; p.quarantine = true; p.masks = 1; p.distancing = true; p.treat = true; }
+  if (level >= 3) { p.tests = 2; p.masks = 2; p.jauge = 0.5; Object.assign(p.close, { bars: true, evenements: true, ecoles: true, culte: true, sport: true }); p.telework = 0.4; p.borders = 3; p.field = 1; }
+  if (level >= 4) { p.lockdown = 2; p.masks = 3; Object.assign(p.close, { restos: true, commerces: true }); p.telework = 0.7; p.curfew = 0; p.transit = 0.5; p.field = 2; p.stock = true; }
+  return p;
+}
+let worldPol = null, pol = [], autoUnmanaged = true;
+let crisis = { unlimited: true, budget: 3000, spent: 0, research: 0, production: 0, priority: 'ages', alloc: 'equitable', mandatory: false, seq: false };
+let cAdh, cEco, cStr, cDet, cPos, cHosp, cIcu, cTravel, cVacc, cTests, cEffPol;
+const CLOSE_W = { bars: 0.10, restos: 0.07, ecoles: 0.12, culte: 0.03, sport: 0.03, evenements: 0.08, commerces: 0.05 };
+function managed(k){ return !!(pol[k] || worldPol); }
+function effectivePolicy(k){ return pol[k] || worldPol || aiPolicy(game.noResponse ? 0 : cLevel[k]); }
+function stringency(p){
+  let s = [0, 0.05, 0.1, 0.15][p.masks] + (p.distancing ? 0.04 : 0) + (1 - p.jauge) * 0.12 + p.telework * 0.12 + [0, 0.06, 0.1, 0.16][[0, 22, 20, 18].indexOf(p.curfew)] + [0, 0.2, 0.4][p.lockdown] + p.transit * 0.05;
+  for (const k in CLOSE_W) if (p.close[k]) s += CLOSE_W[k] * 0.9;
+  return Math.min(1, s);
+}
+function crisisInit(){
+  const z = () => new Float32Array(CN);
+  cAdh = z().fill(0.85); cEco = z().fill(100); cStr = z(); cDet = z(); cPos = z(); cHosp = z(); cIcu = z(); cTravel = z().fill(1); cVacc = z(); cTests = z();
+  cEffPol = new Array(CN).fill(null);
+  pol = new Array(CN).fill(null);
+}
+
 function daily(){
   cE.fill(0); cI.fill(0); cD.fill(0); cR.fill(0);
   for (const i of everList) { const k = cc[i]; if (k >= CN) continue; cE[k] += E[i]; cI[k] += I[i]; cD[k] += D[i]; cR[k] += R[i]; }
   const vis = visibility();
-  let detCountries = 0;
+  let detCountries = 0, spend = 0;
+  const hRate = Math.min(0.25, P.ifr * 12 + 0.01), icuRate = Math.min(0.08, P.ifr * 4 + 0.002);
   for (let k = 0; k < CN; k++) {
     const pop = cPop[k] || 1, wealth = 1 - cPov[k];
-    const detected = cCases[k] * vis + cD[k];
+    const detected = cCases[k] * Math.max(vis, cDet[k]) + cD[k];
     if (detected >= 1) detCountries++;
-    // effondrement
     if (!cCollapsed[k] && cD[k] / pop > 0.25) { cCollapsed[k] = 1; if (pop > 10e6) events.push({ k: 'chaos', c: k, text: `${cName[k]} s’effondre : l’État ne répond plus` }); }
-    // réaction
-    if (!game.noResponse && !cCollapsed[k]) {
+    // ---- niveau d'alerte automatique (pays non gérés)
+    if (!managed(k) && !game.noResponse && !cCollapsed[k]) {
       const dpm = detected / pop * 1e6, slow = 0.5 + cPov[k] * 1.5 / (who ? 2 : 1);
       let target = 0;
       if (detected >= 1 || (who && cE[k] + cI[k] > 0)) target = 1;
       if (dpm >= 5 * slow || cD[k] >= 5 * slow) target = 2;
       if (dpm >= 50 * slow || cD[k] >= 60 * slow) target = 3;
       if (dpm >= 400 * slow || cD[k] / pop >= 2e-5 * slow) target = 4;
-      const active = cE[k] + cI[k];
-      if (active * vis < 1) cQuiet[k]++; else cQuiet[k] = 0;
+      if ((cE[k] + cI[k]) * vis < 1) cQuiet[k]++; else cQuiet[k] = 0;
       const prev = cLevel[k];
       if (target > prev && simT - cSince[k] >= 3 * DAY) { cLevel[k] = prev + 1; cSince[k] = simT; }
       else if (prev > 0 && simT - cSince[k] >= 14 * DAY && cQuiet[k] > (prev === 1 ? 90 : 21) && target < prev) { cLevel[k] = prev - 1; cSince[k] = simT; cQuiet[k] = 0; }
       if (cLevel[k] !== prev && cBig[k]) events.push({ k: cLevel[k] > prev ? 'mesure' : 'levee', c: k, text: cLevel[k] > prev ? `${cName[k]} : ${LEVELS[cLevel[k]].toLowerCase()}` : `${cName[k]} lève des restrictions` });
-      cClosed[k] = cLevel[k] >= 3 ? 1 : 0;
-      // efficacité : les pays riches appliquent mieux leurs mesures
-      cMult[k] = 1 - (1 - MULT[cLevel[k]]) * (0.55 + 0.45 * wealth);
-    } else if (cCollapsed[k]) { cMult[k] = 1; cClosed[k] = 0; }
-    // létalité réelle : soins (pays riches, mesures en place), résistance aux médicaments, symptômes mortels
-    const care = cCollapsed[k] ? 0 : 0.45 * wealth * (1 - evo.drug) * (cLevel[k] >= 2 ? 1 : 0.6);
-    cIfr[k] = 1 - (1 - P.ifr * (1 - care)) * (1 - evo.lethal);
+    }
+    const p = cCollapsed[k] ? POL0 : effectivePolicy(k);
+    cEffPol[k] = p;
+    if (managed(k)) { const s = stringency(p); cLevel[k] = p.lockdown ? 4 : s > 0.35 || p.borders === 3 ? 3 : s > 0.08 ? 2 : p.tests > 0 ? 1 : 0; }
+    // ---- adhésion de la population : s'use avec la sévérité des mesures, remonte avec la peur et le relâchement
+    const S = stringency(p); cStr[k] = S;
+    const fear = Math.min(0.01, (cD[k] / pop) * 300);
+    cAdh[k] = Math.max(0.05, Math.min(0.97, cAdh[k] - S * 0.0035 + fear + (S < 0.25 ? 0.004 : 0)));
+    if (cAdh[k] < 0.3 && S > 0.45 && cBig[k] && Math.random() < 0.05) events.push({ k: 'social', c: k, text: `${cName[k]} : manifestations contre les mesures sanitaires` });
+    // ---- économie : chaque mesure a un coût, l'activité se rétablit lentement
+    cEco[k] = Math.max(20, Math.min(100, cEco[k] - S * 0.22 - (cI[k] / pop) * 15 + (100 - cEco[k]) * 0.012));
+    // respect effectif des mesures : les politiques automatiques sont appliquées plus mollement et plus tard
+    // qu'une cellule de crise pilotée par le joueur
+    const comp = (managed(k) ? 0.45 + 0.55 * cAdh[k] : 0.25 + 0.4 * cAdh[k]) * (0.6 + 0.4 * wealth);
+    // ---- dépistage : capacité de tests contre besoin (malades qui se présentent)
+    const testsDay = p.tests / 1000 * pop * (0.4 + 0.6 * wealth);
+    const seekers = cI[k] * 0.6 + cE[k] * 0.05 + pop * 0.0003;
+    cTests[k] = testsDay;
+    // part des malades symptomatiques effectivement testés : capacité, accès aux soins, délais
+    cDet[k] = testsDay > 0 ? Math.min(0.9, testsDay / seekers) * 0.85 * (0.35 + 0.45 * wealth) : 0;
+    cPos[k] = testsDay > 0 ? Math.min(1, (cI[k] * 0.6 * cDet[k]) / testsDay) : 0;
+    // ---- effet des mesures sur la transmission
+    let m = 1;
+    m *= 1 - (1 - [1, 0.95, 0.86, 0.8][p.masks]) * comp;
+    if (p.distancing) m *= 1 - 0.08 * comp;
+    m *= 1 - 0.2 * (1 - p.jauge) * comp;
+    for (const c in CLOSE_W) if (p.close[c]) m *= 1 - CLOSE_W[c] * comp;
+    m *= 1 - 0.15 * p.telework * comp;
+    m *= 1 - [0, 0.05, 0.1, 0.15][[0, 22, 20, 18].indexOf(p.curfew)] * comp;
+    m *= 1 - [0, 0.18, 0.35][p.lockdown] * comp;
+    m *= 1 - 0.05 * p.transit;
+    // isolement des cas détectés, traçage et quarantaine des contacts (débordé si trop de cas)
+    // seuls les malades avec symptômes sont dépistés, et après le début des symptômes (la contagion
+    // pré-symptomatique et asymptomatique échappe au dépistage)
+    const iso = cDet[k] * (1 - (P.asymp ?? 0.3)) * 0.35 * comp;
+    const traceCap = Math.min(1, (pop * 2e-4 * (0.3 + wealth)) / Math.max(1, cI[k] * 0.3));
+    const trace = p.tracing * cDet[k] * (p.quarantine ? 0.35 : 0.15) * traceCap * comp;
+    m *= Math.max(0.15, 1 - iso - trace);
+    cMult[k] = m;
+    cTravel[k] = [1, 0.35, 0.2, 0.04][p.borders];
+    cClosed[k] = p.borders === 3 ? 1 : 0;
+    // ---- hôpitaux : lits et réanimation ; la saturation fait monter la mortalité
+    const bedsMult = 1 + [0, 0.2, 0.5, 1][p.field];
+    const hosp = pop / 1000 * (1 + 3 * wealth) * bedsMult, icu = pop / 1000 * (0.03 + 0.2 * wealth) * bedsMult * (p.stock ? 1.15 : 1);
+    cHosp[k] = Math.min(9.99, (cI[k] * hRate) / hosp); cIcu[k] = Math.min(9.99, (cI[k] * icuRate) / icu);
+    const over = Math.max(0, cIcu[k] - 1);
+    const care = cCollapsed[k] ? 0 : 0.45 * wealth * (1 - evo.drug) * (p.treat ? 1 : 0.6);
+    const vaxProtect = 1 - Math.min(0.85, cVacc[k] * (crisis.priority === 'ages' ? 2.2 : 1));
+    cIfr[k] = Math.min(0.99, (1 - (1 - P.ifr * (1 - care)) * (1 - evo.lethal)) * (1 + Math.min(1.5, over) * 0.8) * vaxProtect);
+    // ---- dépenses (milliards de dollars par jour)
+    if (managed(k)) spend += (testsDay * 25 + [0, 0.002, 0.005, 0.01][p.field] * pop + (p.stock ? 0.001 * pop : 0) + p.tracing * pop * 0.0005) / 1e9;
+  }
+  // budget global de la cellule de crise
+  spend += [0, 0.4, 1.2, 3][crisis.research] + [0, 0.5, 1.5, 4][crisis.production] * (cureDone ? 1 : 0.2);
+  crisis.spent += spend;
+  if (!crisis.unlimited && crisis.spent > crisis.budget && !crisis.broke) {
+    crisis.broke = true; crisis.research = 0; crisis.production = 0;
+    if (worldPol) { worldPol.tests = Math.min(worldPol.tests, 0.5); worldPol.field = 0; }
+    for (const p of pol) if (p) { p.tests = Math.min(p.tests, 0.5); p.field = 0; }
+    events.push({ k: 'social', text: 'Budget de crise épuisé : tests, hôpitaux de campagne et recherche sont réduits' });
   }
   // Alerte mondiale (OMS)
-  if (!who && !game.noResponse && (detCountries >= 3 || totals.D >= 100 || (totals.cases * vis > 2000))) {
+  if (!who && (!game.noResponse || worldPol) && (detCountries >= 3 || totals.D >= 100 || (totals.cases * vis > 2000))) {
     who = true; events.push({ k: 'oms', text: 'L’OMS déclare une urgence de santé publique de portée internationale' });
   }
-  // Recherche du vaccin / remède
+  // Recherche du vaccin
   if (who && !cureDone && !game.noCure && P.h2h) {
     let contrib = 0;
     for (let k = 0; k < CN; k++) if (!cCollapsed[k]) contrib += cGdp[k] * (cLevel[k] >= 1 ? 1 : 0.3) * Math.max(0, 1 - cD[k] / (cPop[k] || 1) * 3);
     const before = cure;
-    cure += 100 / 420 * (contrib / worldGdp) * game.research * (1 - 0.6 * evo.cureSlow) * (1 + Math.min(1, totals.D / 5e6));
+    const boostR = [1, 1.5, 2.2, 3.5][crisis.research] * (crisis.seq ? 1.1 : 1);
+    cure += 100 / 420 * (contrib / worldGdp) * game.research * boostR * (1 - 0.6 * evo.cureSlow) * (1 + Math.min(1, totals.D / 5e6));
     for (const m of [25, 50, 75]) if (before < m && cure >= m) events.push({ k: 'vaccin', text: `Recherche d’un vaccin : ${m} %` });
-    if (cure >= 100) { cure = 100; cureDone = true; cureDay = simT; events.push({ k: 'vaccin', text: 'Un vaccin est disponible : la vaccination commence dans le monde entier' }); }
+    if (cure >= 100) { cure = 100; cureDone = true; cureDay = simT; events.push({ k: 'vaccin', text: 'Un vaccin est disponible : la production démarre' }); }
   }
-  // Vaccination (après 20 jours de production)
+  // Vaccination : production mondiale limitée, répartie entre les pays
   if (cureDone && simT - cureDay > 20 * DAY) {
+    const prod = crisis.unlimited && crisis.production >= 3 ? 250e6 : [6e6, 15e6, 40e6, 90e6][crisis.production];
+    const ceil = crisis.mandatory ? 0.93 : 0.75;
+    let wsum = 0; const want = new Float64Array(CN);
+    for (let k = 0; k < CN; k++) {
+      if (cCollapsed[k] || cVacc[k] >= ceil) continue;
+      const w = cPop[k] * (crisis.alloc === 'riches' ? Math.pow(1 - cPov[k] + 0.05, 3) : 1) * (0.3 + 0.7 * (1 - cPov[k]) * 0 + 0.7);
+      want[k] = w; wsum += w;
+    }
+    const share = new Float64Array(CN);
+    for (let k = 0; k < CN; k++) if (want[k] > 0) share[k] = Math.min(cPop[k] * 0.012, prod * want[k] / wsum) / cPop[k];   // logistique : 1,2 %/jour max
     for (let i = 0; i < n; i++) {
-      const k = cc[i]; if (k >= CN || cCollapsed[k] || S[i] <= 0) continue;
-      const rate = 0.004 + 0.012 * (1 - cPov[k]);
-      const v = S[i] * rate; S[i] -= v; R[i] += v; totals.V += v;
+      const k = cc[i]; if (k >= CN || !share[k] || S[i] <= 0) continue;
+      const v = Math.min(S[i], N[i] * share[k]); S[i] -= v; R[i] += v; totals.V += v;
       if (!wasActive[i]) { wasActive[i] = 1; everList.push(i); }
     }
+    for (let k = 0; k < CN; k++) cVacc[k] = Math.min(1, cVacc[k] + share[k]);
   }
-  // Paliers de morts
   for (const m of [1e3, 1e5, 1e6, 1e7, 1e8, 1e9]) if (totals.D >= m && !daily.marks.has(m)) { daily.marks.add(m); events.push({ k: 'morts', text: `${fmt(m)} morts dans le monde` }); }
-  // Fin de partie (campagne)
-  if (game.mode === 'campagne' && !ended && simT - startT > 2 * DAY) {
-    const alive = worldPop - totals.D;
-    const everInf = totals.cases / worldPop;
+  // ---- fins de partie
+  if (!ended && simT - startT > 2 * DAY) {
     let res = null;
-    if (game.goal === 'extinction' && totals.D / worldPop > 0.995) res = ['victoire', 'L’humanité a disparu.'];
-    if (game.goal === 'infection' && everInf > 0.95) res = ['victoire', 'Plus de 95 % de l’humanité a été contaminée.'];
-    if (!res && totals.E + totals.I < 0.5) res = ['defaite', cureDone ? 'Le vaccin a eu raison du pathogène.' : 'Le pathogène s’est éteint de lui-même.'];
-    if (!res && cureDone && simT - cureDay > 200 * DAY) res = ['defaite', 'La vaccination a maîtrisé l’épidémie.'];
-    if (res) { ended = true; postMessage({ type: 'end', result: res[0], reason: res[1], day: (simT - startT) / DAY, alive }); }
+    if (game.mode === 'campagne') {
+      const everInf = totals.cases / worldPop;
+      if (game.goal === 'extinction' && totals.D / worldPop > 0.995) res = ['victoire', 'L’humanité a disparu.'];
+      if (game.goal === 'infection' && everInf > 0.95) res = ['victoire', 'Plus de 95 % de l’humanité a été contaminée.'];
+      if (!res && totals.E + totals.I < 0.5) res = ['defaite', cureDone ? 'Le vaccin a eu raison du pathogène.' : 'Le pathogène s’est éteint de lui-même.'];
+      if (!res && cureDone && simT - cureDay > 200 * DAY) res = ['defaite', 'La vaccination a maîtrisé l’épidémie.'];
+    } else if (game.mode === 'defense') {
+      let eco = 0; for (let k = 0; k < CN; k++) eco += cEco[k] * cGdp[k]; eco /= worldGdp;
+      if (totals.E + totals.I < 0.5 && simT - startT > 10 * DAY) res = ['victoire', `Épidémie éteinte. Bilan : ${Math.round(totals.D).toLocaleString('fr-FR')} morts.`];
+      else if (totals.D > (game.maxDeaths || 50e6)) res = ['defaite', 'Le nombre de morts a dépassé le seuil acceptable.'];
+      else if (eco < 45) res = ['defaite', 'L’économie mondiale s’est effondrée.'];
+    }
+    if (res) { ended = true; postMessage({ type: 'end', result: res[0], reason: res[1], day: (simT - startT) / DAY, alive: worldPop - totals.D }); }
   }
 }
 daily.marks = new Set();
@@ -362,10 +465,15 @@ function writeTex(){
 
 function post(extra){
   writeTex();
-  const cs = new Float32Array(CN * 6);
-  for (let k = 0; k < CN; k++) { cs[k * 6] = cE[k] + cI[k]; cs[k * 6 + 1] = cD[k]; cs[k * 6 + 2] = cCases[k]; cs[k * 6 + 3] = cLevel[k]; cs[k * 6 + 4] = cClosed[k]; cs[k * 6 + 5] = cCollapsed[k]; }
+  const CS = 13, cs = new Float32Array(CN * CS);
+  for (let k = 0; k < CN; k++) {
+    const o = k * CS;
+    cs[o] = cE[k] + cI[k]; cs[o + 1] = cD[k]; cs[o + 2] = cCases[k]; cs[o + 3] = cLevel[k]; cs[o + 4] = cClosed[k]; cs[o + 5] = cCollapsed[k];
+    cs[o + 6] = cAdh[k]; cs[o + 7] = cEco[k]; cs[o + 8] = cHosp[k]; cs[o + 9] = cIcu[k]; cs[o + 10] = cDet[k]; cs[o + 11] = cVacc[k]; cs[o + 12] = cTests[k];
+  }
   const msg = { type: 'state', t: simT, day: (simT - startT) / DAY, totals: { ...totals }, flights, events, active: activeList.length,
-    cure, cureDone, who, infCountries, countries: cs, vis: visibility(), ...(extra || {}) };
+    cure, cureDone, who, infCountries, countries: cs, vis: visibility(),
+    crisis: { spent: crisis.spent, budget: crisis.budget, unlimited: crisis.unlimited, broke: !!crisis.broke, managedWorld: !!worldPol }, ...(extra || {}) };
   const hot = [];
   for (let q = 0; q < 3 && activeList.length; q++) { const i = activeList[Math.floor(Math.random() * activeList.length)]; hot.push([(cellIdx[i] % W + .5) * .25 - 180, 90 - (Math.floor(cellIdx[i] / W) + .5) * .25]); }
   msg.hot = hot;
@@ -387,7 +495,8 @@ function exportState(){
     cLevel: cLevel.slice(), cClosed: cClosed.slice(), cCollapsed: cCollapsed.slice(), cSince: cSince.slice(), cInfected: cInfected.slice(),
     cCases: cCases.slice(), cQuiet: cQuiet.slice(), cMult: cMult.slice(), cIfr: cIfr.slice(),
     totals: { ...totals }, who, cure, cureDone, cureDay, infCountries, ended, simT, startT, lastDay, P, game: { ...game }, evo: { ...evo },
-    boost: { ...boost }, trips: trips.map(t => ({ ...t })), marks: [...daily.marks], extImports
+    boost: { ...boost }, trips: trips.map(t => ({ ...t })), marks: [...daily.marks], extImports,
+    crisisState: { worldPol, pol, crisis, cAdh: cAdh.slice(), cEco: cEco.slice(), cVacc: cVacc.slice() }
   };
 }
 function importState(st){
@@ -401,6 +510,7 @@ function importState(st){
   totals = { ...st.totals }; who = st.who; cure = st.cure; cureDone = st.cureDone; cureDay = st.cureDay; infCountries = st.infCountries; ended = st.ended;
   simT = st.simT; startT = st.startT; lastDay = st.lastDay; P = st.P; game = { ...game, ...st.game }; evo = { ...evo, ...st.evo };
   boost = st.boost; trips = st.trips; daily.marks = new Set(st.marks); extImports = st.extImports || 0;
+  if (st.crisisState) { const c = st.crisisState; worldPol = c.worldPol; pol = c.pol; crisis = c.crisis; cAdh.set(c.cAdh); cEco.set(c.cEco); cVacc.set(c.cVacc); }
   ctrl = { cell: -1, until: 0 }; climateDay = -1; accA = null; touched = []; events = []; flights = [];
   tex.fill(0); tex2.fill(0); dirtyR0 = 0; dirtyR1 = H; started = true;
   updateEnv(true);
@@ -445,6 +555,7 @@ self.onmessage = async ev => {
     isActive.fill(0); wasActive.fill(0); activeList = []; everList = []; totals = { S: 0, E: 0, I: 0, R: 0, D: 0, cases: 0, V: 0 };
     cLevel.fill(0); cClosed.fill(0); cCollapsed.fill(0); cSince.fill(0); cInfected.fill(0); cCases.fill(0); cMult.fill(1); cQuiet.fill(0);
     who = false; cure = 0; cureDone = false; infCountries = 0; ended = false; daily.marks = new Set(); events = [];
+    crisisInit(); worldPol = null; crisis = { ...crisis, spent: 0, broke: false, research: 0, production: 0, ...(m.crisis || {}) };
     climateDay = -1; lastDay = -1;
     const best = cellAt(m.lat, m.lon);
     if (best < 0) { postMessage({ type: 'error', message: 'Aucune population à cet endroit : choisissez une zone habitée.' }); return; }
@@ -485,7 +596,8 @@ self.onmessage = async ev => {
     if (gained > 0) { totals.cases += gained; if (cc[j] < CN) cCases[cc[j]] += gained; }
     if (E[j] + I[j] > 0.5) activate(j, m.lon, m.lat); else if (!wasActive[j] && R[j] + D[j] > 0) { wasActive[j] = 1; everList.push(j); setFocus(j, m.lon, m.lat); }
     const k = cc[j], imports = Math.floor(extImports); extImports -= imports;
-    postMessage({ type: 'cellInfo', id: 'sync', N: N[j], E: E[j], I: I[j], R: R[j], D: D[j], level: k < CN ? cLevel[k] : 0, imports });
+    postMessage({ type: 'cellInfo', id: 'sync', N: N[j], E: E[j], I: I[j], R: R[j], D: D[j], level: k < CN ? cLevel[k] : 0, imports,
+      pol: k < CN ? cEffPol[k] : null, adh: k < CN ? cAdh[k] : 0.8, det: k < CN ? cDet[k] : 0 });
   }
   else if (m.type === 'cellQuery' && n) {
     const j = cellAt(m.lat, m.lon); if (j < 0) return;
@@ -500,6 +612,17 @@ self.onmessage = async ev => {
     await advanceTo(m.t);
   }
   else if (m.type === 'stopCatchUp') stopCatchUp = true;
+  // Cellule de crise : politique pour le monde entier ou pour un pays
+  else if (m.type === 'policy') {
+    if (m.scope === 'monde') worldPol = m.pol ? clonePol(m.pol) : null;
+    else if (m.scope >= 0 && m.scope < CN) pol[m.scope] = m.pol ? clonePol(m.pol) : null;
+    if (m.crisis) crisis = { ...crisis, ...m.crisis };
+    if (started && P) { daily(); post(); }
+  }
+  else if (m.type === 'policyGet') {
+    const k = m.scope;
+    postMessage({ type: 'policyInfo', scope: k, pol: k === 'monde' ? worldPol : pol[k], eff: k === 'monde' ? null : cEffPol[k], crisis });
+  }
   else if (m.type === 'save') {
     if (!started || !P) { postMessage({ type: 'saved', id: m.id, state: null }); return; }
     const st = exportState();
