@@ -148,7 +148,30 @@
   #bFollow.on{background:rgba(255,80,60,.18);color:#ff9d92}
   #cityLine{font-size:12px;color:var(--muted);margin-top:6px}
   .zero.dead{background:#333;animation:none}
-  .cluster{position:relative;width:46px;height:46px;pointer-events:none}
+  .shock{width:20px;height:20px;border-radius:50%;border:3px solid #ff4a3a;pointer-events:none;animation:shock 2s ease-out forwards}
+  @keyframes shock{0%{transform:scale(1);opacity:1}100%{transform:scale(28);opacity:0;border-width:1px}}
+  #settings{position:fixed;right:14px;bottom:calc(84px + var(--safe-b));width:270px;z-index:11;padding:12px 14px;display:none}
+  #settings.show{display:block}
+  .opt{width:100%;margin-top:8px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);border-radius:9px;padding:10px;font:500 13px Inter,sans-serif;cursor:pointer;text-align:left}
+  .opt.on{border-color:rgba(127,227,255,.5)}
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.seg button{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);border-radius:8px;padding:8px 4px;font:600 12px Inter,sans-serif;cursor:pointer}
+  .seg button.on{border-color:#ff5a46;color:#ffb0a6;background:rgba(255,70,50,.1)}
+  #tuto{position:fixed;inset:0;z-index:14;display:none;align-items:flex-end;justify-content:center;padding:16px 16px calc(110px + var(--safe-b));background:rgba(0,0,0,.35)}
+  #tuto.show{display:flex}
+  .tutoBox{width:min(440px,100%);padding:18px;background:rgba(14,17,22,.97)}
+  .tutoBox span{font-size:11px;color:var(--accent);letter-spacing:.12em}.tutoBox h3{font-family:"Barlow Condensed";font-size:26px;margin:4px 0 6px;letter-spacing:.04em}
+  .tutoBox p{font-size:14px;line-height:1.5;color:#d7dde3;margin:0 0 6px}
+  #statsPanel{position:fixed;inset:0;z-index:12;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+  #statsPanel.show{display:flex}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .kpis div{background:rgba(255,255,255,.04);border-radius:9px;padding:8px 10px}.kpis span{display:block;font-size:10.5px;color:var(--muted)}.kpis b{font-family:"Barlow Condensed";font-size:22px}
+  .ch{width:100%;height:190px;display:block}.ch.small{height:110px}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--muted);align-items:center}.legend i{width:10px;height:3px;display:inline-block;margin-right:-6px}
+  .tog.inl{display:inline-flex;margin:0 0 0 10px;text-transform:none;letter-spacing:0}
+  .cols{display:grid;grid-template-columns:1fr 1.4fr;gap:18px}
+  .lv{display:grid;grid-template-columns:96px 1fr 34px;gap:8px;align-items:center;font-size:12px;margin:4px 0}.lv i{height:7px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden}.lv i b{display:block;height:100%;background:#ff7a5c}.lv em{font-style:normal;color:var(--muted);text-align:right}
+  #topTable{width:100%;border-collapse:collapse;font-size:12px}#topTable th{text-align:left;color:var(--muted);font-weight:500;padding:4px}#topTable td{padding:5px 4px;border-top:1px solid var(--line)}
+  .statsBtn{margin-top:8px}
   .cluster i{position:absolute;inset:0;border-radius:50%;border:2px solid #ffb02e;background:rgba(255,176,46,.15);animation:cpulse 2s infinite}
   .cluster span{position:absolute;left:50%;top:-18px;transform:translateX(-50%);background:#ffb02e;color:#1a1200;font:700 11px Inter,sans-serif;padding:2px 6px;border-radius:6px;white-space:nowrap}
   @keyframes cpulse{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.5);opacity:.15}}
@@ -241,6 +264,8 @@
     #speeds{margin:0}
     .spd{padding:6px 7px;flex:none;font-size:11px}
     #pathList{max-height:180px}
+    .kpis{grid-template-columns:repeat(3,1fr)} .cols{grid-template-columns:1fr} .ch{height:150px}
+    #settings{left:8px;right:8px;width:auto;bottom:calc(150px + var(--safe-b))}
     #ticker{right:14px;top:calc(156px + var(--safe-t));height:28px}
     #card{left:8px;right:8px;width:auto;top:calc(192px + var(--safe-t))}
     #evoStats{grid-template-columns:1fr}
@@ -270,7 +295,7 @@
 <div id="splash"><div><b>VECTEUR</b><span>Chargement de la planète</span><i></i></div></div>
 
 <div id="top">
-  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 4 — Le jeu</span></div>
+  <div id="brand" class="glass"><b>VECTEUR</b><span>Prototype · Étape 5 — Finition</span></div>
   <div id="searchWrap">
     <div id="search" class="glass">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -382,6 +407,7 @@
       <div class="st"><span><i style="background:#fff"></i>Cas au total</span><b id="stC">0</b></div>
     </div>
     <canvas id="spark"></canvas>
+    <button id="bStats" class="cta sec statsBtn">📊 Statistiques détaillées</button>
     <div id="cityLine"></div>
     <div id="clusterList"></div>
     <div id="lastEvent"></div>
@@ -390,6 +416,10 @@
 </div>
 <div id="place" class="glass"><span id="placeText"></span><button id="placeOk" hidden>☣ Libérer</button><button id="placeCancel">Annuler</button></div>
 <div id="toast" class="glass"></div>
+<div hidden>    <button class="tool on" id="bSpin" hidden data-tip="Rotation automatique" aria-label="Rotation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
+    </button>
+</div>
 <div id="ticker"><b class="live">EN DIRECT</b><div class="tk"><div id="tickerText"></div></div></div>
 <div id="card" class="glass"><div class="epiHead"><b id="cardName"></b><button id="cardClose" aria-label="Fermer">×</button></div><div id="cardBody" class="cgrid"></div>
   <div id="cardLevels" hidden><div class="lbl">Imposer des mesures</div><div class="lvls"><button data-l="0">Aucune</button><button data-l="1">Surveillance</button><button data-l="2">Masques</button><button data-l="3">Fermetures</button><button data-l="4">Confinement</button></div></div></div>
@@ -398,6 +428,26 @@
   <div id="evoStats"></div>
   <div id="evoTabs" class="tabs"></div>
   <div id="evoGrid"></div>
+</div></div>
+<div id="settings" class="glass"><div class="epiHead"><b>Réglages</b><button id="setClose" aria-label="Fermer">×</button></div>
+  <button id="setSound" class="opt"></button>
+  <div class="lbl">Qualité graphique</div>
+  <div id="qualSel" class="seg"><button data-q="auto">Auto</button><button data-q="haute">Haute</button><button data-q="eco">Économie</button></div>
+  <div class="note">Auto allège l’affichage si l’image saccade · <span id="fpsVal"></span></div>
+  <button id="setSpin" class="opt"></button>
+  <button id="setHelp" class="opt">Revoir le tutoriel</button>
+</div>
+<div id="tuto"><div class="tutoBox glass"><span id="tutoStep"></span><h3 id="tutoTitle"></h3><p id="tutoText"></p><div class="row2"><button id="tutoSkip" class="cta sec">Passer</button><button id="tutoNext" class="cta"></button></div></div></div>
+<div id="statsPanel"><div class="evoBox glass">
+  <div class="epiHead"><b>Statistiques mondiales</b><button id="statsClose" aria-label="Fermer">×</button></div>
+  <div id="kpis" class="kpis"></div>
+  <div class="lbl">Évolution <label class="tog inl"><input type="checkbox" id="chLog" checked> échelle logarithmique</label></div>
+  <div class="legend"><i style="background:#fff"></i>Cas au total <i style="background:#ff4a3a"></i>Malades <i style="background:#9de69d"></i>Guéris <i style="background:#5fb8ff"></i>Vaccinés <i style="background:#9aa4af"></i>Morts</div>
+  <canvas id="chMain" class="ch"></canvas>
+  <div class="lbl">Nouveaux cas par jour</div>
+  <canvas id="chDaily" class="ch small"></canvas>
+  <div class="cols"><div><div class="lbl">Mesures dans le monde (pays)</div><div id="lvlBars"></div></div>
+  <div><div class="lbl">Pays les plus touchés</div><table id="topTable"></table></div></div>
 </div></div>
 <div id="endModal"><div class="endBox glass"><h2 id="endTitle"></h2><div id="endBody"></div>
   <div class="row2"><button id="endClose" class="cta sec">Continuer à observer</button><button id="endNew" class="cta">Nouvelle partie</button></div></div></div>
@@ -429,8 +479,8 @@
  <button class="tool on" id="bPop" data-tip="Population" aria-label="Population">
       <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="8" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="17" cy="10" r="1.6"/><circle cx="8" cy="14" r="1.6"/><circle cx="14" cy="15" r="1.6"/><circle cx="19" cy="17" r="1.3"/><circle cx="5" cy="19" r="1.3"/><circle cx="11" cy="20" r="1.1"/></svg>
     </button>
-    <button class="tool on" id="bSpin" data-tip="Rotation automatique" aria-label="Rotation">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
+    <button class="tool" id="bSettings" data-tip="Réglages" aria-label="Réglages">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button>
     <button class="tool" id="compass" data-tip="Remettre le nord en haut" aria-label="Nord">
       <svg viewBox="0 0 24 24"><path d="M12 3 15 12H9z" fill="#e3b778"/><path d="M12 21 9 12h6z" fill="#8a939c"/></svg>
@@ -584,7 +634,7 @@
     container: 'map',
     style: STYLE,
     center: [10, 30],
-    zoom: window.innerWidth < 720 ? 1.15 : 1.7,
+    zoom: 0.4,
     maxPitch: 85,
     attributionControl: false,
     pixelRatio: Math.min(window.devicePixelRatio || 1, MOBILE ? 1.5 : 2),
@@ -632,7 +682,13 @@
   }
   map.on('error', e => console.warn('Carte :', e && e.error ? e.error.message : e));
 
-  function hideSplash(){ const s = $('splash'); if (s) s.classList.add('hide'); }
+  function hideSplash(){
+    const s = $('splash'); if (!s || s.classList.contains('hide')) return;
+    s.classList.add('hide');
+    // intro : la Terre s'approche
+    map.easeTo({ zoom: window.innerWidth < 720 ? 1.15 : 1.7, center: [map.getCenter().lng - 25, 25], duration: 3800, easing: t => 1 - Math.pow(1 - t, 3) });
+    setTimeout(() => { if (!localStore.get('tuto')) showTuto(0); }, 4200);
+  }
 
   /* ============ Horloge de simulation ============ */
   // t : heure de la simulation ; vt : heure « visuelle » (soleil, trajets), figée au-delà de 1 h/s
@@ -856,6 +912,7 @@
       vec2 c = gl_PointCoord * 2.0 - 1.0;
       float r = length(c);
       if (r > 1.0) discard;
+      if (v_kind < -0.5) { float h = exp(-r * r * 3.5) * v_a; vec3 hc = v_state > 1.5 ? vec3(1.0, 0.18, 0.08) : vec3(1.0, 0.55, 0.1); o = vec4(hc * h, h * 0.5); return; }
       vec3 day = v_kind > 1.5 ? vec3(1.0, 0.82, 0.30) : vec3(0.45, 0.93, 1.0);
       vec3 night = vec3(1.0, 0.74, 0.40);
       vec3 core = mix(day, night, v_night);
@@ -920,6 +977,7 @@
           // 2 passes : d'abord les sains / guéris / morts, puis les malades et personnes en incubation par-dessus
           bool sick = v_state > 0.5 && v_state < 2.5;
           if (sick != (u_pass > 0.5)) { gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+          if (u_pass > 1.5) { v_kind = -1.0; v_a = u_alpha * 0.32; gl_PointSize = u_size * 7.0; return; }   // halo lumineux des foyers
           if (!sick && u_epi > 0.5) v_a *= 0.7;
           gl_PointSize = u_size * mix(0.85, 1.2, h1) * (1.0 + moving * 0.15) * (v_state > 3.5 ? 0.7 : v_state > 1.5 ? 2.0 : v_state > 0.5 ? 1.45 : 1.0);
         }`, DOT_FS);
@@ -943,8 +1001,13 @@
       gl.vertexAttribPointer(l1, 2, gl.UNSIGNED_SHORT, true, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.wbuf); gl.enableVertexAttribArray(l2);
       gl.vertexAttribPointer(l2, 2, gl.UNSIGNED_SHORT, true, 0, 0);
-      gl.uniform1f(p.u('u_pass'), 0); gl.drawArrays(gl.POINTS, 0, this.count);
-      if (epiTex.on) { gl.uniform1f(p.u('u_pass'), 1); gl.drawArrays(gl.POINTS, 0, this.count); }
+      const cnt = Math.floor(this.count * quality.dotFrac);
+      if (epiTex.on && z < 7 && quality.level > 0) {   // halo additif sous les points
+        gl.blendFunc(gl.ONE, gl.ONE); gl.uniform1f(p.u('u_pass'), 2); gl.drawArrays(gl.POINTS, 0, cnt);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      }
+      gl.uniform1f(p.u('u_pass'), 0); gl.drawArrays(gl.POINTS, 0, cnt);
+      if (epiTex.on) { gl.uniform1f(p.u('u_pass'), 1); gl.drawArrays(gl.POINTS, 0, cnt); }
       gl.disableVertexAttribArray(l1); gl.disableVertexAttribArray(l2);
     }
   };
@@ -1704,7 +1767,10 @@
         for (const f of m.flights) flightLayer.add(f);
         if (m.flights.length) { const f = m.flights[m.flights.length - 1]; epi.lastFlight = `✈ Cas importé : ${f[4]} → ${f[5]}`; }
         const dd = Math.floor(m.day);
-        if (!epi.hist.length || epi.hist[epi.hist.length - 1].d !== dd) epi.hist.push({ d: dd, I: m.totals.I + m.totals.E, D: m.totals.D });
+        if (!epi.hist.length || epi.hist[epi.hist.length - 1].d !== dd) {
+          const T = m.totals; epi.hist.push({ d: dd, I: T.I + T.E, D: T.D, C: T.cases, R: T.R - (T.V || 0), V: T.V || 0 });
+          sound.tension(Math.min(1, Math.log10(1 + T.I + T.E) / 9));
+        }
         epi.countries = m.countries; epi.cure = m.cure; epi.cureDone = m.cureDone; epi.who = m.who; epi.infCountries = m.infCountries;
         gameEvents(m);
         drawStats();
@@ -1868,6 +1934,7 @@
   $('epiClose').onclick = () => openPanel(false);
   function showSetup(){ $('epiSetup').hidden = false; $('epiRun').hidden = true; $('epiTitle').textContent = 'Nouvelle épidémie'; showTab(1); }
   function toast(msg){
+    sound.play(/vaccin/i.test(msg) ? 'good' : 'alert');
     const t = $('toast'); t.textContent = msg; t.classList.add('show');
     clearTimeout(toast.tm); toast.tm = setTimeout(() => t.classList.remove('show'), 4000);
   }
@@ -1932,6 +1999,7 @@
     $('runPlace').textContent = (P.release ? 'Dispersion : ' : 'Patient zéro : ') + epi.place + (count ? ' · ' + fmtFull.format(count) + ' personne(s)' : '');
     $('runState').textContent = '';
     setSpeed(60);
+    sound.play('release'); shockwave(zeroLngLat);
     follow = true; $('bFollow').classList.toggle('on', follow);
     $('bFollow').textContent = P.release === 'air' ? '◎ Suivre le nuage' : P.release ? '◎ Suivre' : '◎ Suivre le patient zéro';
     openPanel(!MOBILE);
@@ -2068,11 +2136,12 @@
     if (game.mode !== 'campagne') return;
     const el = document.createElement('button'); el.className = 'bubble'; el.textContent = '🧬';
     const mk = new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(map);
-    el.onclick = e => { e.stopPropagation(); addDNA(val, 'bulle'); mk.remove(); };
+    el.onclick = e => { e.stopPropagation(); sound.play('pop'); addDNA(val, 'bulle'); mk.remove(); };
     setTimeout(() => mk.remove(), 12000);
   }
   // Bandeau d'actualité façon chaîne d'info
   function pushNews(t){
+    sound.play('news');
     game.news.unshift({ t, d: Math.floor(epi.day) });
     game.news = game.news.slice(0, 12);
     const txt = game.news.map(n => `<span><b>J${n.d}</b> ${n.t}</span>`).join('<i>•</i>');
@@ -2145,7 +2214,7 @@
   function buy(id){
     const u = window.EVOLUTION.find(x => x[0] === id); if (!u || game.owned.has(id)) return;
     if (game.mode === 'campagne') { if (game.dna < u[3]) return; game.dna -= u[3]; }
-    game.owned.add(id);
+    game.owned.add(id); sound.play('buy');
     if (u[5].cure && epi.worker) epi.worker.postMessage({ type: 'cure', delta: u[5].cure });
     applyEvo(); drawEvo();
     pushNews(`Le pathogène a muté : ${u[2].toLowerCase()}`);
@@ -2153,6 +2222,7 @@
 
   // Fin de partie
   function showEnd(m){
+    sound.play(m.result === 'victoire' ? 'win' : 'lose');
     setSpeed(0);
     const win = m.result === 'victoire';
     $('endTitle').textContent = win ? 'Victoire' : 'Défaite';
@@ -2181,6 +2251,190 @@
     $('goalRow').hidden = game.mode !== 'campagne';
     $('sbRow').hidden = game.mode === 'campagne';
   }
+
+  /* ============ Finition : stockage local, son, qualité, réglages, tutoriel, statistiques ============ */
+  const localStore = {
+    get(k){ try { return JSON.parse(localStorage.getItem('vecteur.' + k)); } catch (e) { return null; } },
+    set(k, v){ try { localStorage.setItem('vecteur.' + k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  // ---- Son (synthétisé en direct, aucun fichier à télécharger)
+  const sound = (() => {
+    let ctx = null, master = null, amb = null, muted = !!localStore.get('muted'), level = 0;
+    function start(){
+      if (ctx) return;
+      try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+      master = ctx.createGain(); master.gain.value = muted ? 0 : 0.7; master.connect(ctx.destination);
+      // nappe d'ambiance : deux notes graves légèrement désaccordées, filtrées, qui respirent
+      const g = ctx.createGain(); g.gain.value = 0.05;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 260; f.Q.value = 4;
+      const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 0.07; lg.gain.value = 90; lfo.connect(lg); lg.connect(f.frequency); lfo.start();
+      for (const [fr, type] of [[55, 'sawtooth'], [82.6, 'triangle'], [110.4, 'sine']]) { const o = ctx.createOscillator(); o.type = type; o.frequency.value = fr; o.detune.value = (Math.random() - .5) * 12; o.connect(f); o.start(); }
+      f.connect(g); g.connect(master);
+      amb = { g, f };
+    }
+    function env(type, freq, t0, dur, vol, glideTo){
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t0); if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.05);
+    }
+    function noise(t0, dur, vol, cut){
+      const b = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) ** 2;
+      const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      s.buffer = b; f.type = 'lowpass'; f.frequency.value = cut; g.gain.value = vol; s.connect(f); f.connect(g); g.connect(master); s.start(t0);
+    }
+    let lastNews = 0;
+    return {
+      start,
+      play(kind){
+        if (!ctx || muted) return;
+        const t = ctx.currentTime;
+        if (kind === 'click') env('sine', 900, t, 0.05, 0.05);
+        else if (kind === 'pop') { env('sine', 520, t, 0.18, 0.18, 1400); env('sine', 1040, t + 0.05, 0.15, 0.08, 2000); }
+        else if (kind === 'news') { if (t - lastNews < 1.5) return; lastNews = t; env('sine', 880, t, 0.12, 0.05); env('sine', 1320, t + 0.11, 0.18, 0.04); }
+        else if (kind === 'alert') { env('sawtooth', 196, t, 0.5, 0.07); env('sawtooth', 185, t + 0.25, 0.6, 0.06); }
+        else if (kind === 'good') { [523, 659, 784].forEach((f, i) => env('triangle', f, t + i * 0.12, 0.6, 0.08)); }
+        else if (kind === 'release') { noise(t, 1.6, 0.5, 900); env('sine', 90, t, 1.8, 0.35, 32); }
+        else if (kind === 'buy') { env('triangle', 330, t, 0.12, 0.08, 660); env('sine', 990, t + 0.08, 0.2, 0.06); }
+        else if (kind === 'win') { [220, 277, 330, 440].forEach((f, i) => env('sawtooth', f, t + i * 0.18, 1.6, 0.06)); }
+        else if (kind === 'lose') { [392, 330, 262, 196].forEach((f, i) => env('triangle', f, t + i * 0.3, 1.2, 0.08)); }
+      },
+      // l'ambiance se tend avec l'épidémie (filtre qui s'ouvre, volume)
+      tension(x){ level = x; if (!amb) return; const t = ctx.currentTime; amb.f.frequency.setTargetAtTime(260 + x * 900, t, 2); amb.g.gain.setTargetAtTime(0.05 + x * 0.05, t, 2); },
+      setMuted(m){ muted = m; localStore.set('muted', m); if (master) master.gain.setTargetAtTime(m ? 0 : 0.7, ctx.currentTime, 0.1); },
+      get muted(){ return muted; }
+    };
+  })();
+  addEventListener('pointerdown', () => sound.start(), { once: true });
+  document.addEventListener('click', e => { if (e.target.closest('button')) sound.play('click'); });
+
+  // ---- Onde de choc à la libération
+  function shockwave(ll){
+    if (!ll) return;
+    const el = document.createElement('div'); el.className = 'shock';
+    const mk = new maplibregl.Marker({ element: el }).setLngLat(ll).addTo(map);
+    setTimeout(() => mk.remove(), 2200);
+  }
+
+  // ---- Qualité graphique (auto / haute / économie) et adaptation automatique
+  const quality = { mode: localStore.get('quality') || 'auto', level: 2, dotFrac: 1 };
+  function applyQuality(lvl){
+    quality.level = lvl;
+    quality.dotFrac = lvl === 0 ? 0.45 : lvl === 1 ? 0.75 : 1;
+    const pr = Math.min(window.devicePixelRatio || 1, lvl === 0 ? 1 : MOBILE ? 1.5 : 2);
+    try { if (map.setPixelRatio) map.setPixelRatio(pr); } catch (e) {}
+    if (lvl === 0 && terrainOn) { terrainOn = false; $('bTerrain').classList.remove('on'); try { map.setTerrain(null); } catch (e) {} }
+    map.triggerRepaint();
+    document.querySelectorAll('#qualSel button').forEach(b => b.classList.toggle('on', b.dataset.q === quality.mode));
+  }
+  function setQualityMode(m){ quality.mode = m; localStore.set('quality', m); applyQuality(m === 'haute' ? 2 : m === 'eco' ? 0 : (MOBILE ? 1 : 2)); }
+  setQualityMode(quality.mode);
+  // mesure des images par seconde : si ça saccade en mode auto, on allège
+  (() => {
+    let frames = 0, t0 = performance.now(), slow = 0;
+    function tick(now){
+      frames++;
+      if (now - t0 > 3000) {
+        const fps = frames * 1000 / (now - t0); frames = 0; t0 = now;
+        if (quality.mode === 'auto' && !document.hidden && now > 20000) {   // pas pendant le chargement
+          if (fps < 28) { if (++slow >= 2 && quality.level > 0) { applyQuality(quality.level - 1); toast('Qualité réduite automatiquement pour garder la fluidité'); slow = 0; } }
+          else slow = 0;
+        }
+        if ($('fpsVal')) $('fpsVal').textContent = Math.round(fps) + ' i/s';
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  })();
+
+  // ---- Menu de réglages
+  $('bSettings').onclick = () => $('settings').classList.toggle('show');
+  $('setClose').onclick = () => $('settings').classList.remove('show');
+  $('setSound').onclick = () => { sound.setMuted(!sound.muted); drawSettings(); };
+  $('setSpin').onclick = () => { $('bSpin').click(); drawSettings(); };
+  $('setHelp').onclick = () => { $('settings').classList.remove('show'); showTuto(0); };
+  document.querySelectorAll('#qualSel button').forEach(b => b.onclick = () => setQualityMode(b.dataset.q));
+  function drawSettings(){
+    $('setSound').textContent = sound.muted ? 'Son coupé' : 'Son activé';
+    $('setSound').classList.toggle('on', !sound.muted);
+    $('setSpin').textContent = spinOn ? 'Rotation : oui' : 'Rotation : non';
+  }
+  drawSettings();
+
+  // ---- Tutoriel (premier lancement)
+  const TUTO = [
+    ['Bienvenue dans Vecteur', 'Une vraie planète, 8,2 milliards d’habitants et 130 agents réels. Faites glisser pour tourner la Terre, pincez pour zoomer jusqu’à la rue.'],
+    ['1 · Choisissez un agent', 'Dans le panneau « Nouvelle épidémie », cherchez un virus, une bactérie, un parasite… ou combinez-en jusqu’à 3.'],
+    ['2 · Le patient zéro', 'Réglez son âge, son métier, ses habitudes, ses voyages : son comportement change tout au début de l’épidémie.'],
+    ['3 · Libérez', 'Touchez la carte à l’endroit voulu puis « Libérer ». On descend dans la rue : chaque habitant est simulé et la contagion se fait personne par personne.'],
+    ['4 · Faites évoluer', 'Accélérez le temps (en haut à droite), récoltez les bulles 🧬 et achetez des mutations dans « Évolution ». Gagnez avant le vaccin !']
+  ];
+  function showTuto(i){
+    if (i >= TUTO.length) { $('tuto').classList.remove('show'); localStore.set('tuto', 1); return; }
+    $('tutoTitle').textContent = TUTO[i][0]; $('tutoText').textContent = TUTO[i][1];
+    $('tutoStep').textContent = `${i + 1} / ${TUTO.length}`;
+    $('tutoNext').textContent = i === TUTO.length - 1 ? 'C’est parti' : 'Suivant';
+    $('tutoNext').onclick = () => showTuto(i + 1);
+    $('tutoSkip').onclick = () => showTuto(TUTO.length);
+    $('tuto').classList.add('show');
+  }
+
+  // ---- Tableau de statistiques
+  $('bStats').onclick = () => { $('statsPanel').classList.add('show'); drawStatsPanel(); };
+  $('statsClose').onclick = () => $('statsPanel').classList.remove('show');
+  function chart(cv, series, opts = {}){
+    const g = cv.getContext('2d'), w = cv.width = cv.clientWidth * 2, h = cv.height = cv.clientHeight * 2;
+    g.clearRect(0, 0, w, h);
+    const H = epi.hist; if (H.length < 2) { g.fillStyle = '#9aa4af'; g.font = '24px Inter'; g.fillText('Pas encore assez de données', 20, h / 2); return; }
+    const max = Math.max(1, ...series.flatMap(s => H.map(s.v)));
+    const pad = 34, X = i => pad + i / (H.length - 1) * (w - pad - 8), Y = v => h - 22 - (opts.log ? Math.log10(1 + v) / Math.log10(1 + max) : v / max) * (h - 40);
+    g.strokeStyle = 'rgba(255,255,255,.08)'; g.lineWidth = 1; g.fillStyle = '#7d8792'; g.font = '20px Inter';
+    for (let k = 0; k <= 3; k++) { const v = opts.log ? Math.pow(10, Math.log10(1 + max) * k / 3) - 1 : max * k / 3, y = Y(v); g.beginPath(); g.moveTo(pad, y); g.lineTo(w, y); g.stroke(); g.fillText(fmtN.format(v), 2, y - 4); }
+    g.fillText('J' + H[0].d, pad, h - 2); g.fillText('J' + H[H.length - 1].d, w - 70, h - 2);
+    for (const s of series) {
+      if (s.bars) { const bw = Math.max(1, (w - pad) / H.length - 1); g.fillStyle = s.col; H.forEach((x, i) => { const v = s.v(x, i); g.fillRect(X(i) - bw / 2, Y(v), bw, h - 22 - Y(v)); }); continue; }
+      g.beginPath(); H.forEach((x, i) => { const y = Y(s.v(x, i)); i ? g.lineTo(X(i), y) : g.moveTo(X(i), y); });
+      g.strokeStyle = s.col; g.lineWidth = 3; g.stroke();
+    }
+  }
+  function drawStatsPanel(){
+    if (!$('statsPanel').classList.contains('show')) return;
+    const H = epi.hist, T = epi.totals || {};
+    const daily = (i) => i > 0 ? Math.max(0, H[i].C - H[i - 1].C) : 0;
+    chart($('chMain'), [
+      { v: x => x.C, col: '#ffffff' }, { v: x => x.I, col: '#ff4a3a' }, { v: x => x.R, col: '#9de69d' }, { v: x => x.V, col: '#5fb8ff' }, { v: x => x.D, col: '#9aa4af' }
+    ], { log: $('chLog').checked });
+    chart($('chDaily'), [{ v: (x, i) => daily(i), col: 'rgba(255,120,80,.85)', bars: true }]);
+    // R effectif : évolution des nouveaux cas sur 7 jours, ramenée au temps de génération
+    let rEff = '—';
+    if (H.length > 15 && epi.p) {
+      // cas cumulés à une date donnée (les jours ne sont pas forcément tous présents en accéléré)
+      const at = d => { let best = H[0]; for (const x of H) if (x.d <= d) best = x; return best.C; };
+      const dN = H[H.length - 1].d;
+      const n1 = at(dN) - at(dN - 7), n0 = at(dN - 7) - at(dN - 14);
+      if (n0 > 20) rEff = String(+Math.pow(n1 / n0, (epi.p.inc + epi.p.inf / 2) / 7).toFixed(2)).replace('.', ',');
+    }
+    const lvl = [0, 0, 0, 0, 0]; let collapsed = 0;
+    const rows = [];
+    if (epi.countries) for (let k = 0; k < COUNTRIES.length; k++) {
+      const c = epi.countries; lvl[c[k * 6 + 3]]++; if (c[k * 6 + 5]) collapsed++;
+      if (c[k * 6 + 2] > 0) rows.push([k, c[k * 6 + 2], c[k * 6], c[k * 6 + 1], c[k * 6 + 3], c[k * 6 + 5]]);
+    }
+    rows.sort((a, b) => b[1] - a[1]);
+    $('kpis').innerHTML = [
+      ['Cas au total', fmtN.format(T.cases || 0)], ['Malades actuels', fmtN.format((T.I || 0) + (T.E || 0))], ['Morts', fmtN.format(T.D || 0)],
+      ['Vaccinés', fmtN.format(T.V || 0)], ['R effectif', rEff], ['Létalité observée', T.cases ? pct((T.D || 0) / Math.max(1, T.cases - (T.I || 0) - (T.E || 0))) : '—']
+    ].map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join('');
+    const LV = ['Aucune mesure', 'Surveillance', 'Masques', 'Fermetures', 'Confinement'];
+    $('lvlBars').innerHTML = LV.map((l, i) => `<div class="lv"><span>${l}</span><i><b style="width:${(lvl[i] / Math.max(1, COUNTRIES.length) * 100).toFixed(1)}%"></b></i><em>${lvl[i]}</em></div>`).join('')
+      + (collapsed ? `<div class="lv"><span>États effondrés</span><i><b style="width:${(collapsed / COUNTRIES.length * 100).toFixed(1)}%;background:#666"></b></i><em>${collapsed}</em></div>` : '');
+    $('topTable').innerHTML = '<tr><th>Pays</th><th>Cas</th><th>Malades</th><th>Morts</th><th>Mesures</th></tr>' + rows.slice(0, 10).map(r =>
+      `<tr data-k="${r[0]}"><td>${COUNTRIES[r[0]][1]}</td><td>${fmtN.format(r[1])}</td><td>${fmtN.format(r[2])}</td><td>${fmtN.format(r[3])}</td><td>${r[5] ? 'Effondré' : LV[r[4]]}</td></tr>`).join('');
+  }
+  $('chLog').onchange = drawStatsPanel;
+  setInterval(drawStatsPanel, 1500);
 
   function drawStats(){
     const T = epi.totals; if (!T) return;
