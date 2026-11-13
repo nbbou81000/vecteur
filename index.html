@@ -22,7 +22,7 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden}
-  #space{position:fixed;inset:-10%;background:#000 center/1400px repeat;will-change:background-position}
+  #space{position:fixed;inset:-200px;background:#000 center/1400px repeat;will-change:transform}
   #map{position:fixed;inset:0}
   .maplibregl-canvas{outline:none}
 
@@ -64,6 +64,10 @@
   .tool svg{width:22px;height:22px}
   .tool[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:54px;left:50%;transform:translateX(-50%);background:var(--panel-strong);border:1px solid var(--line);padding:5px 9px;border-radius:7px;font-size:11.5px;white-space:nowrap;color:var(--text)}
   #compass svg{transition:transform .1s linear}
+
+  @media (hover:none), (max-width:720px){
+    .glass{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(14,17,22,.84)}
+  }
 
   /* ---------- Attribution ---------- */
   .maplibregl-ctrl-bottom-right{bottom:calc(84px + var(--safe-b))!important}
@@ -210,7 +214,7 @@
       { id:'satellite', type:'raster', source:'satellite',
         paint:{ 'raster-fade-duration':250, 'raster-contrast':.06, 'raster-saturation':.06, 'raster-brightness-max':.97 } },
 
-      { id:'hillshade', type:'hillshade', source:'hillshadeSrc', maxzoom:13,
+      { id:'hillshade', type:'hillshade', source:'hillshadeSrc', maxzoom:11,
         paint:{ 'hillshade-exaggeration':.18, 'hillshade-shadow-color':'rgba(0,0,0,.55)',
                 'hillshade-highlight-color':'rgba(255,255,255,.06)', 'hillshade-accent-color':'rgba(0,0,0,0)' } },
 
@@ -282,6 +286,7 @@
   };
 
   /* ============ Carte ============ */
+  const MOBILE = matchMedia('(hover:none)').matches || window.innerWidth < 720;
   const map = new maplibregl.Map({
     container: 'map',
     style: STYLE,
@@ -289,16 +294,31 @@
     zoom: window.innerWidth < 720 ? 1.15 : 1.7,
     maxPitch: 85,
     attributionControl: false,
-    antialias: true,
-    canvasContextAttributes: { antialias: true }
+    pixelRatio: Math.min(window.devicePixelRatio || 1, MOBILE ? 1.5 : 2),
+    antialias: !MOBILE,
+    canvasContextAttributes: { antialias: !MOBILE },
+    fadeDuration: MOBILE ? 150 : 300
   });
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
   const $ = id => document.getElementById(id);
   let terrainOn = true;
 
+  // Le relief 3D est très coûteux : on ne l'active que quand la caméra est inclinée
+  // (vu du dessus, il ne se voit pas et l'ombrage suffit).
+  let terrainActive = false;
+  function syncTerrain(){
+    const want = terrainOn && map.getPitch() > 15 && map.getZoom() > 6;
+    if (want === terrainActive) return;
+    terrainActive = want;
+    try { map.setTerrain(want ? { source: 'terrain', exaggeration: 1.25 } : null); } catch (e) { terrainActive = false; }
+  }
+  map.on('pitchend', syncTerrain);
+  map.on('zoomend', syncTerrain);
+  map.on('moveend', syncTerrain);
+
   map.on('load', () => {
-    try { map.setTerrain({ source: 'terrain', exaggeration: 1.25 }); } catch (e) { terrainOn = false; $('bTerrain').classList.remove('on'); }
+    syncTerrain();
     map.once('idle', hideSplash);
     setTimeout(hideSplash, 7000);
     updateHud();
@@ -349,7 +369,7 @@
     $('compass').querySelector('svg').style.transform = `rotate(${-map.getBearing()}deg)`;
     $('bTilt').classList.toggle('on', map.getPitch() > 20);
     // Léger parallaxe du ciel étoilé
-    $('space').style.backgroundPosition = `${(-c.lng * 4).toFixed(1)}px ${(c.lat * 3).toFixed(1)}px`;
+    $('space').style.transform = `translate3d(${(((-c.lng * 4) % 140) / 1).toFixed(1)}px, ${(c.lat * 1.5).toFixed(1)}px, 0)`;
   }
 
   /* ============ Déplacements ============ */
@@ -382,7 +402,7 @@
   $('compass').onclick = () => { pauseSpin(); map.easeTo({ bearing: 0, duration: 900 }); };
   $('bTerrain').onclick = () => {
     terrainOn = !terrainOn;
-    try { map.setTerrain(terrainOn ? { source: 'terrain', exaggeration: 1.25 } : null); } catch (e) {}
+    syncTerrain();
     $('bTerrain').classList.toggle('on', terrainOn);
   };
   $('bBuild').onclick = () => {
